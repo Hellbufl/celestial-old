@@ -235,7 +235,9 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 		window = sd.OutputWindow;
 		oWndProc = (WNDPROC)SetWindowLongPtrA(window, GWLP_WNDPROC, (LONG_PTR)WndProc);
 
-		SetupRenderTarget(pSwapChain);
+		// TODO: figure out why removing this fixes the game freezing on the first frame
+		//SetupRenderTarget(pSwapChain);
+		// DO NOT DELETE
 
 		// Init our win32 and DX11 ImGui Implementations
 		ImGui::CreateContext();
