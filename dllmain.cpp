@@ -1,6 +1,6 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include <windows.h>
-//#include "ocular.h"
+#include <ocular.h>
 #include "tether.h"
 #include "celestial.h"
 
@@ -27,7 +27,14 @@ DWORD WINAPI MainThread(LPVOID lpReserved)
 {
 	ConsoleSetup();
 
-	Celestial::MainLoop();
+	celestial::Init();
+
+	ocular::Init();
+	ocular::CreateHook(celestial::hkPresent, ocular::VMT::Present);
+	ocular::CreateHook(celestial::hkResizeBuffers, ocular::VMT::ResizeBuffers);
+	ocular::CreateHook(celestial::hkOMSetRenderTargets, ocular::VMT::OMSetRenderTargets);
+
+	celestial::MainLoop();
 
 	return TRUE;
 }

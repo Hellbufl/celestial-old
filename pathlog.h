@@ -24,36 +24,12 @@ struct BoxTrigger
 {
 	Vector3 pos;
 	Matrix3 basis;
+	Matrix3 inverseBasis;
 	Vector3 points[8];
 };
 
-class PathLog
+struct PLogState
 {
-public:
-
-	void Init();
-
-	void Update(Vector3* pos, Vector3* rot);
-
-	void ReadPFile(std::string filename, Path& destination);
-
-	void DrawPath(ImDrawList* drawList, ImVec2 screenSize, Matrix4* viewMatrix, ImColor color, float thickness);
-
-	void KeyPress(WPARAM key);
-
-	std::string GetPathsDirectory();
-
-private:
-
-	void StartRecording();
-	void ResetRecording();
-	void StopRecording();
-
-	void LogPosition(Vector3& pos);
-
-	void CreateBoxTrigger(Vector3* pos, Vector3* rot, BoxTrigger& trigger);
-	void CheckTriggers(Vector3* playerPos);
-
 	bool primed;
 	bool recording;
 
@@ -67,6 +43,7 @@ private:
 	std::fstream recordingPathFile;
 
 	std::vector<Path> displayedPaths;
+	std::vector<Path> comparedPaths;
 
 	BoxTrigger recordingTrigger[2];
 	Vector3 triggerSize;
@@ -76,3 +53,18 @@ private:
 
 	std::vector<Vector3> debugLines;
 };
+
+namespace pathlog
+{
+	void Init(PLogState& state);
+
+	void Update(PLogState& state, Vector3* pos, Vector3* rot);
+
+	void ReadPFile(std::string filename, Path& destination);
+
+	void StartRecording(PLogState& state);
+	void ResetRecording(PLogState& state);
+	void StopRecording(PLogState& state);
+
+	std::string GetPathsDirectory();
+}

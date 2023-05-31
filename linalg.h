@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <map>
-#include "imgui/imgui.h"
+//#include "imgui/imgui.h"
 
 struct Vector2 {
     union {
@@ -224,14 +224,14 @@ inline bool DXWorldToScreen(Matrix4* vMatrix, Vector3& position, int scrnWidth, 
     return true;
 }
 
-inline ImColor Float3ToImColor(float array[3]) {
-    return ImColor(array[0], array[1], array[2], 1.0f);
-}
-
-inline ImColor Float3AToImColor(float array[3], float alpha) {
-    return ImColor(array[0], array[1], array[2], alpha);
-}
-
-inline ImColor Float4ToImColor(float array[4]) {
-    return ImColor(array[0], array[1], array[2], array[3]);
-}
+//inline ImColor Float3ToImColor(float array[3]) {
+//    return ImColor(array[0], array[1], array[2], 1.0f);
+//}
+//
+//inline ImColor Float3AToImColor(float array[3], float alpha) {
+//    return ImColor(array[0], array[1], array[2], alpha);
+//}
+//
+//inline ImColor Float4ToImColor(float array[4]) {
+//    return ImColor(array[0], array[1], array[2], array[3]);
+//}

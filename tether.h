@@ -127,6 +127,28 @@ namespace tether
 			else
 				return ((decltype(D3D11CreateDevice)*)addr)(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels, SDKVersion, ppDevice, pFeatureLevel, ppImmediateContext);
 		}
+
+#pragma comment(linker, "/EXPORT:D3D11CreateDeviceAndSwapChain=tether_D3D11CreateDeviceAndSwapChain")
+		inline __declspec(dllexport) DWORD WINAPI tether_D3D11CreateDeviceAndSwapChain(	IDXGIAdapter				*pAdapter,
+																						D3D_DRIVER_TYPE				DriverType,
+																						HMODULE						Software,
+																						UINT						Flags,
+																						const D3D_FEATURE_LEVEL		*pFeatureLevels,
+																						UINT						FeatureLevels,
+																						UINT						SDKVersion,
+																						const DXGI_SWAP_CHAIN_DESC	*pSwapChainDesc,
+																						IDXGISwapChain				**ppSwapChain,
+																						ID3D11Device				**ppDevice,
+																						D3D_FEATURE_LEVEL			*pFeatureLevel,
+																						ID3D11DeviceContext			**ppImmediateContext	)
+		{
+			void* addr = GetProcAddress(CreateTether(L"d3d11.dll"), "D3D11CreateDeviceAndSwapChain");
+
+			if (!addr)
+				ErrorBox(tetherResult::GetAddressError, "D3D11CreateDeviceAndSwapChain");
+			else
+				return ((decltype(D3D11CreateDeviceAndSwapChain)*)addr)(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels, SDKVersion, pSwapChainDesc, ppSwapChain, ppDevice, pFeatureLevel, ppImmediateContext);
+		}
 	}
 
 }

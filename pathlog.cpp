@@ -1,23 +1,27 @@
 #include "pathlog.h"
 
-void PathLog::Init()
+void LogPosition(std::fstream& file, Vector3& pos);
+void CreateBoxTrigger(Vector3* pos, Vector3 size, Vector3* rot, BoxTrigger& destTrigger);
+void CheckTriggers(PLogState& state, Vector3* playerPos);
+
+void pathlog::Init(PLogState& state)
 {
 	printf("[PathLog] initializing...\n");
 
-	primed = false;
-	recording = false;
-	triggerState[0] = 0;
-	triggerState[1] = 0;
+	state.primed = false;
+	state.recording = false;
+	state.triggerState[0] = 0;
+	state.triggerState[1] = 0;
 
-	outFileName = OUT_FILE_NAME;
-	outFileType = OUT_FILE_TYPE;
+	state.outFileName = OUT_FILE_NAME;
+	state.outFileType = OUT_FILE_TYPE;
 
-	triggerSize.x = 1.0f;
-	triggerSize.y = 1.0f;
-	triggerSize.z = 1.0f;
+	state.triggerSize.x = 1.0f;
+	state.triggerSize.y = 1.0f;
+	state.triggerSize.z = 1.0f;
 
-	recordingFilename = outFileName + outFileType;
-	currentFilePath = GetPathsDirectory() + recordingFilename;
+	state.recordingFilename = state.outFileName + state.outFileType;
+	state.currentFilePath = GetPathsDirectory() + state.recordingFilename;
 
 	if (CreateDirectory(PATH_FILE_DIR, NULL) == ERROR_PATH_NOT_FOUND)
 	{
@@ -25,170 +29,74 @@ void PathLog::Init()
 		exit(1);
 	}
 
-	recordingPathFile.open(currentFilePath, std::ios::in);
+	state.recordingPathFile.open(state.currentFilePath, std::ios::in);
 
-	for (int i = 1; recordingPathFile; i++)
+	for (int i = 1; state.recordingPathFile; i++)
 	{
-		recordingPathFile.close();
+		state.recordingPathFile.close();
 
 		Path newPath;
-		ReadPFile(currentFilePath, newPath);
+		ReadPFile(state.currentFilePath, newPath);
 
 		if (newPath.nodes.size() > 0)
-			displayedPaths.push_back(newPath);
+			state.displayedPaths.push_back(newPath);
 
-		recordingFilename = outFileName + "_" + std::to_string(i) + outFileType;
-		currentFilePath = GetPathsDirectory() + recordingFilename;
-		recordingPathFile.open(currentFilePath, std::ios::in);
+		state.recordingFilename = state.outFileName + "_" + std::to_string(i) + state.outFileType;
+		state.currentFilePath = GetPathsDirectory() + state.recordingFilename;
+		state.recordingPathFile.open(state.currentFilePath, std::ios::in);
 	}
 
-	printf("[PathLog] current recording file: %s\n", recordingFilename);
+	printf("[PathLog] current recording file: %s\n", state.recordingFilename);
 }
 
-void PathLog::Update(Vector3* playerPos, Vector3* playerRot)
+void pathlog::Update(PLogState& state, Vector3* playerPos, Vector3* playerRot)
 {
 	for (int i = 0; i < 2; i++)
 	{
-		if (triggerState[i] != 1) continue;
+		if (state.triggerState[i] != 1) continue;
 		
-		CreateBoxTrigger(playerPos, playerRot, recordingTrigger[i]);
-		triggerState[i] = 2;
+		CreateBoxTrigger(playerPos, state.triggerSize, playerRot, state.recordingTrigger[i]);
+		state.triggerState[i] = 2;
 	}
-
 
 	// DEBUG \/
-	debugLines.clear();
-	//bool prevInTrigger[2];
-	//prevInTrigger[0] = playerInTrigger[0];
-	//prevInTrigger[1] = playerInTrigger[1];
+	state.debugLines.clear();
+	bool prevInTrigger[2];
+	prevInTrigger[0] = state.playerInTrigger[0];
+	prevInTrigger[1] = state.playerInTrigger[1];
 	// DEBUG /\
 
-	CheckTriggers(playerPos);
-	
+	CheckTriggers(state, playerPos);
+
 	// DEBUG \/
-	//if (prevInTrigger[0] != playerInTrigger[0] || prevInTrigger[1] != playerInTrigger[1])
-	//	printf("[PathLog] Triggers (%d, %d) %d\n", playerInTrigger[0], playerInTrigger[1], primed);
+	if (prevInTrigger[0] != state.playerInTrigger[0] || prevInTrigger[1] != state.playerInTrigger[1])
+		printf("[PathLog] Triggers: (%d, %d) %d\n", state.playerInTrigger[0], state.playerInTrigger[1], state.primed);
 	// DEBUG /\
 
-	if (!triggerState[0] || !triggerState[1]) return;
+	if (!state.triggerState[0] || !state.triggerState[1]) return;
 
-	if (playerInTrigger[0] && !primed)
+	if (state.playerInTrigger[0] && !state.primed)
 	{
-		primed = true;
-		ResetRecording();
+		state.primed = true;
+		ResetRecording(state);
 	}
 	
-	if (!playerInTrigger[0] && primed)
+	if (!state.playerInTrigger[0] && state.primed)
 	{
-		primed = false;
-		StartRecording();
+		state.primed = false;
+		StartRecording(state);
 	}
 
-	if (playerInTrigger[1] && recording)
+	if (state.playerInTrigger[1] && state.recording)
 	{
-		StopRecording();
+		StopRecording(state);
 	}
 
-	if (playerPos && recording)
-		LogPosition(*playerPos);
+	if (playerPos && state.recording)
+		LogPosition(state.recordingPathFile, *playerPos);
 }
 
-void PathLog::LogPosition(Vector3& pos)
-{
-	recordingPathFile.write((char*)pos.v, sizeof(float) * 3);
-}
-
-void PathLog::CreateBoxTrigger(Vector3* pos, Vector3* rot, BoxTrigger& trigger)
-{
-	if (pos == nullptr) return;
-	if (rot == nullptr) return;
-
-	trigger.pos = *pos;
-
-	trigger.basis = Matrix3(	Vector3(cos(rot->y), 0.0f, sin(rot->y)),
-								Vector3(0.0f, 1.0f, 0.0f),
-								Vector3(-sin(rot->y), 0.0f, cos(rot->y))	);
-
-	Vector3 delta;
-
-	for (int i = 0; i < 8; i++)
-	{
-		delta.x = (i & 1) * 2 - 1;
-		delta.y = ((i >> 2) & 1) * 2 - 1;
-		delta.z = ((i >> 1) & 1) * 2 - 1;
-
-		trigger.points[i] = *pos + trigger.basis * delta * triggerSize;
-	}
-
-	printf("[PathLog] trigger created successgully\n");
-}
-
-void PathLog::CheckTriggers(Vector3* playerPos)
-{
-	if (!playerPos) return;
-	Vector3 relativePos;
-
-	for (int i = 0; i < 2; i++)
-	{
-		if (!triggerState[i]) continue;
-
-		relativePos = recordingTrigger[i].basis * (*playerPos - recordingTrigger[i].pos);
-		playerInTrigger[i] = abs(relativePos.x) < triggerSize.x && abs(relativePos.y) < triggerSize.y && abs(relativePos.z) < triggerSize.z;
-	}
-}
-
-void PathLog::StartRecording()
-{
-	if (recording) return;
-	recording = true;
-	recordingPathFile.open(currentFilePath, std::ios::out | std::ios::binary);
-	recordingStart = std::chrono::high_resolution_clock::now();
-	printf("[PathLog] recording started...\n");
-}
-
-void PathLog::ResetRecording()
-{
-	if (!recording) return;
-	recording = false;
-	recordingPathFile.close();
-	printf("[PathLog] reset recording\n");
-}
-
-void PathLog::StopRecording()
-{
-	if (!recording) return;
-
-	recording = false;
-
-	long long timeRecorded = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - recordingStart).count();
-	printf("[PathLog] recorded time: %lld\n", timeRecorded);
-	recordingPathFile.write((char*) &timeRecorded, sizeof(long long));
-
-	recordingPathFile.close();
-	
-	int suffix;
-	int suffixStart = outFileName.length() + 1;
-	int suffixEnd = recordingFilename.length() - outFileType.length();
-
-	if (suffixStart < suffixEnd)
-		suffix = std::stoi(recordingFilename.substr(suffixStart, (long long) suffixEnd - suffixStart));
-	else
-		suffix = 0;
-
-	printf("[PathLog] suffix = %d\n", suffix);
-
-	Path newPath;
-	ReadPFile(currentFilePath, newPath);
-
-	if (newPath.nodes.size() > 0)
-		displayedPaths.push_back(newPath);
-
-	recordingFilename = outFileName + "_" + std::to_string(suffix + 1) + outFileType;
-
-	printf("[PathLog] recording stopped.\n");
-}
-
-void PathLog::ReadPFile(std::string filepath, Path& destination)
+void pathlog::ReadPFile(std::string filepath, Path& destination)
 {
 	printf("[PathLog] reading path...\n");
 
@@ -225,78 +133,113 @@ void PathLog::ReadPFile(std::string filepath, Path& destination)
 		destination.nodes.push_back(*((Vector3*)buffer + i));
 	}
 
-	destination.time = *(long long*) (buffer + nodeCount * sizeof(Vector3));
+	destination.time = *(long long*)(buffer + nodeCount * sizeof(Vector3));
 
 	pathFile.close();
 
 	printf("[PathLog] path of size %d read succussfully!\n", (int)destination.nodes.size());
 }
 
-void PathLog::DrawPath(ImDrawList* drawList, ImVec2 screenSize, Matrix4* viewMatrix, ImColor color, float thickness)
+void pathlog::StartRecording(PLogState& state)
 {
-	Vector2 tempPoint[2];
-	ImVec2 points[2];
+	if (state.recording) return;
+	state.recording = true;
+	state.recordingPathFile.open(state.currentFilePath, std::ios::out | std::ios::binary);
+	state.recordingStart = std::chrono::high_resolution_clock::now();
+	printf("[PathLog] recording started...\n");
+}
 
-	for (auto path : displayedPaths)
-		for (size_t i = 0; i < path.nodes.size() - 1; i++)
-		{
-			DXWorldToScreen(viewMatrix, path.nodes[i], screenSize.x, screenSize.y, tempPoint[0]);
-			DXWorldToScreen(viewMatrix, path.nodes[i+1], screenSize.x, screenSize.y, tempPoint[1]);
-			points[0].x = tempPoint[0].x;
-			points[0].y = tempPoint[0].y;
-			points[1].x = tempPoint[1].x;
-			points[1].y = tempPoint[1].y;
+void pathlog::ResetRecording(PLogState& state)
+{
+	if (!state.recording) return;
+	state.recording = false;
+	state.recordingPathFile.close();
+	printf("[PathLog] reset recording\n");
+}
 
-			drawList->AddLine(points[0], points[1], color, thickness);
-		}
+void pathlog::StopRecording(PLogState& state)
+{
+	if (!state.recording) return;
 
-	Vector2 triggerBoxPoints[8];
-	ImVec2 ppPoints[8];
+	state.recording = false;
+
+	long long timeRecorded = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - state.recordingStart).count();
+	printf("[PathLog] recorded time: %lld\n", timeRecorded);
+	state.recordingPathFile.write((char*) &timeRecorded, sizeof(long long));
+
+	state.recordingPathFile.close();
 	
-	Vector2 debugPoints[2];
-	ImVec2 debugLine[2];
-	
-	// DEBUG \/
-	for (int i = 0; i + 1 < debugLines.size(); i += 2)
+	int suffix;
+	int suffixStart = state.outFileName.length() + 1;
+	int suffixEnd = state.recordingFilename.length() - state.outFileType.length();
+
+	if (suffixStart < suffixEnd)
+		suffix = std::stoi(state.recordingFilename.substr(suffixStart, (long long) suffixEnd - suffixStart));
+	else
+		suffix = 0;
+
+	printf("[PathLog] suffix = %d\n", suffix);
+
+	Path newPath;
+	ReadPFile(state.currentFilePath, newPath);
+
+	if (newPath.nodes.size() > 0)
+		state.displayedPaths.push_back(newPath);
+
+	state.recordingFilename = state.outFileName + "_" + std::to_string(suffix + 1) + state.outFileType;
+
+	printf("[PathLog] recording stopped.\n");
+}
+
+void LogPosition(std::fstream& file, Vector3& pos)
+{
+	file.write((char*)pos.v, sizeof(float) * 3);
+}
+
+void CreateBoxTrigger(Vector3* pos, Vector3 size, Vector3* rot, BoxTrigger& destTrigger)
+{
+	if (pos == nullptr) return;
+	if (rot == nullptr) return;
+
+	destTrigger.pos = *pos;
+
+	destTrigger.basis = Matrix3(	Vector3(cos(rot->y), 0.0f, sin(rot->y)),
+									Vector3(0.0f, 1.0f, 0.0f),
+									Vector3(-sin(rot->y), 0.0f, cos(rot->y))	);
+
+	destTrigger.inverseBasis = Matrix3(		Vector3(cos(rot->y), 0.0f, -sin(rot->y)),
+											Vector3(0.0f, 1.0f, 0.0f),
+											Vector3(sin(rot->y), 0.0f, cos(rot->y))	);
+
+	Vector3 delta;
+
+	for (int i = 0; i < 8; i++)
 	{
-		DXWorldToScreen(viewMatrix, debugLines[i], screenSize.x, screenSize.y, debugPoints[0]);
-		DXWorldToScreen(viewMatrix, debugLines[i+1], screenSize.x, screenSize.y, debugPoints[1]);
+		delta.x = (i & 1) * 2 - 1;
+		delta.y = ((i >> 2) & 1) * 2 - 1;
+		delta.z = ((i >> 1) & 1) * 2 - 1;
 
-		debugLine[0].x = debugPoints[0].x;
-		debugLine[0].y = debugPoints[0].y;
-		debugLine[1].x = debugPoints[1].x;
-		debugLine[1].y = debugPoints[1].y;
-		drawList->AddLine(debugLine[0], debugLine[1], color);
+		destTrigger.points[i] = *pos + destTrigger.inverseBasis * delta * size;
 	}
-	// DEBUG /\
 
-	for (int t = 0; t < 2; t++)
+	printf("[PathLog] trigger created successgully\n");
+}
+
+void CheckTriggers(PLogState& state, Vector3* playerPos)
+{
+	if (!playerPos) return;
+	Vector3 relativePos;
+
+	for (int i = 0; i < 2; i++)
 	{
-		if (!triggerState[t]) continue;
+		if (!state.triggerState[i]) continue;
 
-		for (int i = 0; i < 8; i++)
-		{
-			DXWorldToScreen(viewMatrix, recordingTrigger[t].points[i], screenSize.x, screenSize.y, triggerBoxPoints[i]);
-			ppPoints[i].x = triggerBoxPoints[i].x;
-			ppPoints[i].y = triggerBoxPoints[i].y;
-		}
-
-		drawList->AddLine(ppPoints[0], ppPoints[1], color);
-		drawList->AddLine(ppPoints[0], ppPoints[2], color);
-		drawList->AddLine(ppPoints[0], ppPoints[4], color);
-		drawList->AddLine(ppPoints[1], ppPoints[3], color);
-		drawList->AddLine(ppPoints[1], ppPoints[5], color);
-		drawList->AddLine(ppPoints[2], ppPoints[3], color);
-		drawList->AddLine(ppPoints[2], ppPoints[6], color);
-		drawList->AddLine(ppPoints[3], ppPoints[7], color);
-		drawList->AddLine(ppPoints[4], ppPoints[5], color);
-		drawList->AddLine(ppPoints[4], ppPoints[6], color);
-		drawList->AddLine(ppPoints[5], ppPoints[7], color);
-		drawList->AddLine(ppPoints[6], ppPoints[7], color);
+		relativePos = state.recordingTrigger[i].basis * (*playerPos - state.recordingTrigger[i].pos);
+		state.playerInTrigger[i] = abs(relativePos.x) < state.triggerSize.x && abs(relativePos.y) < state.triggerSize.y && abs(relativePos.z) < state.triggerSize.z;
 	}
 }
 
-std::string PathLog::GetPathsDirectory()
+std::string pathlog::GetPathsDirectory()
 {
 	char modPath[MAX_PATH];
 	DWORD result = GetModuleFileNameA(nullptr, modPath, MAX_PATH);
@@ -315,35 +258,4 @@ std::string PathLog::GetPathsDirectory()
 	std::string PathsDirString = gameDir + slash + PATHS_FOLDER + slash;
 
 	return PathsDirString;
-}
-
-void PathLog::KeyPress(WPARAM key)
-{
-	switch (key)
-	{
-	//case VK_INSERT:
-	//	if (!recording)
-	//		StartRecording();
-	//	else
-	//		StopRecording();
-	//	break;
-	case VK_OEM_COMMA:
-		triggerState[0] = 1;
-		break;
-	
-	case VK_OEM_PERIOD:
-		triggerState[1] = 1;
-		break;
-
-	case VK_END:
-		ResetRecording();
-		break;
-
-	case VK_NEXT:
-		displayedPaths.clear();
-		break;
-
-	default:
-		break;
-	}
 }
