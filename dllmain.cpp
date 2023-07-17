@@ -50,7 +50,7 @@ BOOL WINAPI DllMain(HMODULE hMod, DWORD dwReason, LPVOID lpReserved)
 		break;
 	case DLL_PROCESS_DETACH:
 		fflush(stdout);
-		fclose(stream);
+		if (stream) fclose(stream);
 		break;
 	}
 	return TRUE;

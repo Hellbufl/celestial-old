@@ -41,21 +41,26 @@ WNDPROC oWndProc;
 bool rebindingKey[KEYBIND_COUNT];
 
 // DEBUG //
-Path testpath;
-bool popen;
-void ShowTestWindow(bool* p_open);
+//Path testpath;
 void DrawDebug(ImColor color, float thickness);
 // DEBUG //
 
 void celestial::MainLoop()
 {
 	bool running = true;
+	int tickLength = 1000 / TICKRATE;
+	std::chrono::time_point<std::chrono::high_resolution_clock> lastTick = std::chrono::high_resolution_clock::now();
 
 	Vector3* playerPos;
 	Vector3* playerRot;
 
 	while (running)
 	{
+		uint64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - lastTick).count();
+		if (timePassed < tickLength) continue;
+
+		lastTick = std::chrono::high_resolution_clock::now();
+
 		playerPos = GameData::GetPlayerPosition(processStartPtr);
 		playerRot = GameData::GetPlayerRotation(processStartPtr);
 
@@ -75,7 +80,7 @@ void celestial::Init()
 	pathlog::Init(ppLog);
 
 	// DEBUG //
-	pathlog::ReadPFile(pathlog::GetPathsDirectory() + "test.p", testpath);
+	//pathlog::ReadPathFile(pathlog::GetPathsDirectory() + "test.p", testpath);
 }
 
 void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
@@ -197,16 +202,70 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	if (cdssRes != S_OK) printf("[Celestial] ERROR: Failed to create depth stencil state: %X\n", cdssRes);
 
 	// DEBUG //
+	//std::vector<LineVertex> vertices;
+	//CreateLineVertexBuffer(testpath.nodes, DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), 0.02f, vertices);
+
+	//D3D11_MAPPED_SUBRESOURCE vms;
+	//pContext->Map(lineVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vms);
+	//memcpy(vms.pData, vertices.data(), vertices.size() * sizeof(LineVertex));
+	//pContext->Unmap(lineVertexBuffer, 0);
+
+	initCustomRender = true;
+	printf("[Celestial] rendering initialized.\n");
+}
+
+void DrawLine(ID3D11DeviceContext* pContext, std::vector<Vector3> nodes)
+{
+	if (nodes.size() < 2) return;
+
 	std::vector<LineVertex> vertices;
-	CreateLineVertexBuffer(testpath.nodes, DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), 0.02f, vertices);
+	celestial::CreateLineVertexBuffer(nodes, DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), 0.02f, vertices);
 
 	D3D11_MAPPED_SUBRESOURCE vms;
 	pContext->Map(lineVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vms);
 	memcpy(vms.pData, vertices.data(), vertices.size() * sizeof(LineVertex));
 	pContext->Unmap(lineVertexBuffer, 0);
 
-	initCustomRender = true;
-	printf("[Celestial] rendering initialized.\n");
+	UINT stride = sizeof(LineVertex);
+	UINT offset = 0;
+	pContext->IASetVertexBuffers(0, 1, &lineVertexBuffer, &stride, &offset);
+	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pContext->IASetInputLayout(lineInputLayout);
+
+	// Set up shaders and constant buffers
+	pContext->VSSetShader(lineVertexShader, 0, 0);
+	pContext->PSSetShader(pixelShader, 0, 0);
+	pContext->VSSetConstantBuffers(0, 1, &constVMatrixBuffer);
+
+	pContext->Draw(vertices.size(), 0);
+}
+
+void DrawBox(ID3D11DeviceContext* pContext, std::vector<Vector3> boxPoints)
+{
+	if (boxPoints.size() != 8) return;
+
+	std::vector<BoxVertex> boxVertices;
+
+	celestial::CreateBoxVertexBuffer(boxPoints, DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.5f), boxVertices);
+
+	D3D11_MAPPED_SUBRESOURCE vms;
+	HRESULT pResult = pContext->Map(boxVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vms);
+	memcpy(vms.pData, boxVertices.data(), boxVertices.size() * sizeof(BoxVertex));
+	pContext->Unmap(boxVertexBuffer, 0);
+
+	// Set IA stage
+	UINT stride = sizeof(BoxVertex);
+	UINT offset = 0;
+	pContext->IASetVertexBuffers(0, 1, &boxVertexBuffer, &stride, &offset);
+	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pContext->IASetInputLayout(boxInputLayout);
+
+	// Set up shaders and constant buffers
+	pContext->VSSetShader(vertexShader, 0, 0);
+	pContext->PSSetShader(pixelShader, 0, 0);
+	pContext->VSSetConstantBuffers(0, 1, &constVMatrixBuffer);
+
+	pContext->Draw(boxVertices.size(), 0);
 }
 
 HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
@@ -214,6 +273,7 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 	// Get our current device and context
 	ID3D11Device* pDevice = nullptr;
 	pSwapChain->GetDevice(__uuidof(ID3D11Device), (void**) &pDevice);
+
 	ID3D11DeviceContext* pContext;
 	pDevice->GetImmediateContext(&pContext);
 
@@ -271,46 +331,17 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 	memcpy(vms.pData, &VsConstData, sizeof(VS_CONSTANT_BUFFER));
 	pContext->Unmap(constVMatrixBuffer, 0);
 
-	// Set IA stage
-	UINT stride = sizeof(LineVertex);
-	UINT offset = 0;
-	pContext->IASetVertexBuffers(0, 1, &lineVertexBuffer, &stride, &offset);
-	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	pContext->IASetInputLayout(lineInputLayout);
+	DrawLine(pContext, ppLog.recordingPath.nodes);
+	DrawLine(pContext, ppLog.displayedPaths[0].nodes);
 
-	// Set up shaders and constant buffers
-	pContext->VSSetShader(lineVertexShader, 0, 0);
-	pContext->PSSetShader(pixelShader, 0, 0);
-	pContext->VSSetConstantBuffers(0, 1, &constVMatrixBuffer);
-
-	pContext->Draw(testpath.nodes.size() * 6, 0);
-
-	if (ppLog.triggerState[0] == 2)
+	for (int i = 0; i < 2; i++)
 	{
-		std::vector<BoxVertex> boxVertices;
+		if (ppLog.triggerState[i] != 2) continue;
+
 		std::vector<Vector3> boxPoints;
-		for (int i = 0; i < 8; i++) boxPoints.push_back(ppLog.recordingTrigger[0].points[i]);
+		for (int p = 0; p < 8; p++) boxPoints.push_back(ppLog.recordingTrigger[i].points[p]);
 
-		CreateBoxVertexBuffer(boxPoints, DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.5f), boxVertices);
-
-		//D3D11_MAPPED_SUBRESOURCE vms;
-		HRESULT pResult = pContext->Map(boxVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vms);
-		memcpy(vms.pData, boxVertices.data(), boxVertices.size() * sizeof(BoxVertex));
-		pContext->Unmap(boxVertexBuffer, 0);
-
-		// Set IA stage
-		stride = sizeof(BoxVertex);
-		offset = 0;
-		pContext->IASetVertexBuffers(0, 1, &boxVertexBuffer, &stride, &offset);
-		pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		pContext->IASetInputLayout(boxInputLayout);
-
-		// Set up shaders and constant buffers
-		pContext->VSSetShader(vertexShader, 0, 0);
-		pContext->PSSetShader(pixelShader, 0, 0);
-		//pContext->VSSetConstantBuffers(0, 1, &constVMatrixBuffer);
-
-		pContext->Draw(boxVertices.size(), 0);
+		DrawBox(pContext, boxPoints);
 	}
 
 	ImGui_ImplDX11_NewFrame();
@@ -426,26 +457,33 @@ void celestial::hkOMSetRenderTargets(ID3D11DeviceContext* pDeviceContext, UINT N
 }
 
 // takes a list of points and outputs a vertex buffer to draw a line between these points
-void celestial::CreateLineVertexBuffer(std::vector<Vector3> pathNodes, DirectX::XMFLOAT4 color, float lineThickness, std::vector<LineVertex>& destBuffer)
+void celestial::CreateLineVertexBuffer(std::vector<Vector3> nodes, DirectX::XMFLOAT4 color, float lineThickness, std::vector<LineVertex>& destBuffer)
 {
-	for (size_t i = 0; i < pathNodes.size() - 1; i++)
+	if (nodes.size() < 2)
+	{
+		printf("[Celestial] ERROR: CreateLineVertexBuffer needs at least 2 nodes\n");
+		Sleep(2000);
+		exit(1);
+	}
+
+	for (size_t i = 0; i < nodes.size() - 1; i++)
 	{
 		LineVertex newVertex[6];
 		destBuffer.reserve(6);
 
-		newVertex[0].pos.x = pathNodes[i].x;
-		newVertex[0].pos.y = pathNodes[i].y;
-		newVertex[0].pos.z = pathNodes[i].z;
-		newVertex[0].nextPos.x = pathNodes[i + 1].x;
-		newVertex[0].nextPos.y = pathNodes[i + 1].y;
-		newVertex[0].nextPos.z = pathNodes[i + 1].z;
+		newVertex[0].pos.x = nodes[i].x;
+		newVertex[0].pos.y = nodes[i].y;
+		newVertex[0].pos.z = nodes[i].z;
+		newVertex[0].nextPos.x = nodes[i + 1].x;
+		newVertex[0].nextPos.y = nodes[i + 1].y;
+		newVertex[0].nextPos.z = nodes[i + 1].z;
 
-		newVertex[1].pos.x = pathNodes[i + 1].x;
-		newVertex[1].pos.y = pathNodes[i + 1].y;
-		newVertex[1].pos.z = pathNodes[i + 1].z;
-		newVertex[1].nextPos.x = pathNodes[i].x;
-		newVertex[1].nextPos.y = pathNodes[i].y;
-		newVertex[1].nextPos.z = pathNodes[i].z;
+		newVertex[1].pos.x = nodes[i + 1].x;
+		newVertex[1].pos.y = nodes[i + 1].y;
+		newVertex[1].pos.z = nodes[i + 1].z;
+		newVertex[1].nextPos.x = nodes[i].x;
+		newVertex[1].nextPos.y = nodes[i].y;
+		newVertex[1].nextPos.z = nodes[i].z;
 
 		newVertex[0].colour = color;
 		newVertex[1].colour = color;
@@ -473,8 +511,12 @@ void celestial::CreateLineVertexBuffer(std::vector<Vector3> pathNodes, DirectX::
 
 void celestial::CreateBoxVertexBuffer(std::vector<Vector3> points, DirectX::XMFLOAT4 color, std::vector<BoxVertex>& destBuffer)
 {
-	if (points.size() != 8) return;
-
+	if (points.size() != 8)
+	{
+		printf("[Celestial] ERROR: CreateBoxVertexBuffer needs exactly 8 points\n");
+		Sleep(2000);
+		exit(1);
+	}
 	BoxVertex newVertex[36];
 	destBuffer.reserve(36);
 
@@ -715,7 +757,7 @@ void celestial::KeyPress(WPARAM key)
 	if (key == currentConfig.stopKeybind)
 	{
 		if (currentConfig.directMode)
-			pathlog::StopRecording(ppLog);
+			pathlog::StopRecording(ppLog, true);
 		else
 			ppLog.triggerState[1] = 1;
 		return;

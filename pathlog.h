@@ -11,8 +11,11 @@
 
 #define PATHS_FOLDER "Paths"
 #define PATH_FILE_DIR L"Paths"
-#define OUT_FILE_NAME "pathlog"
-#define OUT_FILE_TYPE ".p"
+#define PATH_FILE_NAME "pathlog"
+#define PATH_FILE_TYPE ".p"
+#define PATH_FILE_OFFSET 12
+#define COMP_FILE_NAME "pathcomparison"
+#define COMP_FILE_TYPE ".pcomp"
 
 struct Path
 {
@@ -35,12 +38,14 @@ struct PLogState
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> recordingStart;
 
-	std::string recordingFilename;
-	std::string currentFilePath;
-	std::string outFileName;
-	std::string outFileType;
+	//std::string recordingFilename;
+	//std::string currentFilePath;
+	//std::string outFileName;
+	//std::string outFileType;
 
-	std::fstream recordingPathFile;
+	//std::fstream recordingPathFile;
+
+	Path recordingPath;
 
 	std::vector<Path> displayedPaths;
 	std::vector<Path> comparedPaths;
@@ -60,11 +65,14 @@ namespace pathlog
 
 	void Update(PLogState& state, Vector3* pos, Vector3* rot);
 
-	void ReadPFile(std::string filename, Path& destination);
+	void ReadPathFile(std::string filename, std::vector<Path>& destination);
+	void ReadCompFile(PLogState& state, std::string filename);
 
 	void StartRecording(PLogState& state);
 	void ResetRecording(PLogState& state);
-	void StopRecording(PLogState& state);
+	void StopRecording(PLogState& state, bool direct);
+
+	void DestroyTriggers(PLogState& state);
 
 	std::string GetPathsDirectory();
 }

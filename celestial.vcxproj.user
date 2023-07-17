@@ -6,5 +6,51 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerCommand>C:\SteamLibrary\steamapps\common\NieRAutomata\NieRAutomata.exe</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>{
+"name": "Launch Automata",
+"type": "cppvsdbg",
+"request": "launch",
+"program": "${env:NIER_DIR}\\NieRAutomata.exe.unpacked.exe",
+"cwd": "${env:NIER_DIR}",
+"symbolSearchPath": "${workspaceFolder}/build/Debug",
+"args": [],
+"environment": [
+"name": "SteamGameId",
+"value": "524220"
+},
+"name": "SteamAppId",
+"name": "SteamOverlayGameId",
+}
+],
+"logging": {
+"moduleLoad": true,
+"trace": true
+$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
+    <LocalDebuggerAttach>false</LocalDebuggerAttach>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>C:\SteamLibrary\steamapps\common\NieRAutomata\NieRAutomata.exe</LocalDebuggerCommand>
+    <LocalDebuggerEnvironment>{
+"name": "Launch Automata",
+"type": "cppvsdbg",
+"request": "launch",
+"program": "${env:NIER_DIR}\\NieRAutomata.exe.unpacked.exe",
+"cwd": "${env:NIER_DIR}",
+"symbolSearchPath": "${workspaceFolder}/build/Debug",
+"args": [],
+"environment": [
+"name": "SteamGameId",
+"value": "524220"
+},
+"name": "SteamAppId",
+"name": "SteamOverlayGameId",
+}
+],
+"logging": {
+"moduleLoad": true,
+"trace": true
+$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
+    <LocalDebuggerAttach>false</LocalDebuggerAttach>
   </PropertyGroup>
 </Project>

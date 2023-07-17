@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <ocular.h>
 #include <DirectXMath.h>
+#include <chrono>
 #include "ReadData.h"
 #include "pathlog.h"
 #include "gamedata.h"
@@ -14,7 +15,8 @@
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_impl_dx11.h"
 
-#define MAX_VERTS 1024
+#define TICKRATE 25
+#define MAX_VERTS 32768
 #define GUI_BUTTON_SIZE 150
 #define KEYBIND_COUNT 5
 
