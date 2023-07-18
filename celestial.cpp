@@ -1,6 +1,9 @@
 #include "celestial.h"
 
-void GUIKeybind(ImGuiIO& io, const char* name, uint32_t& keybind, bool& rebinding);
+void GUIKeybind(ImGuiIO& io, const char* name, uint32_t& keybind, int rebindingIndex);
+
+// DEBUG //
+void DrawDebug(ImColor color, float thickness);
 
 uint64_t processStartPtr;
 PLogState ppLog;
@@ -39,11 +42,7 @@ HWND window;
 WNDPROC oWndProc;
 
 bool rebindingKey[KEYBIND_COUNT];
-
-// DEBUG //
-//Path testpath;
-void DrawDebug(ImColor color, float thickness);
-// DEBUG //
+std::vector<uint32_t> currentKeybinds;
 
 void celestial::MainLoop()
 {
@@ -78,9 +77,6 @@ void celestial::Init()
 	config::ReadConfig(currentConfig);
 
 	pathlog::Init(ppLog);
-
-	// DEBUG //
-	//pathlog::ReadPathFile(pathlog::GetPathsDirectory() + "test.p", testpath);
 }
 
 void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
@@ -200,15 +196,6 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	// Create depth stencil state
 	HRESULT cdssRes = pDevice->CreateDepthStencilState(&dsDesc, &depthStencilState);
 	if (cdssRes != S_OK) printf("[Celestial] ERROR: Failed to create depth stencil state: %X\n", cdssRes);
-
-	// DEBUG //
-	//std::vector<LineVertex> vertices;
-	//CreateLineVertexBuffer(testpath.nodes, DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), 0.02f, vertices);
-
-	//D3D11_MAPPED_SUBRESOURCE vms;
-	//pContext->Map(lineVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vms);
-	//memcpy(vms.pData, vertices.data(), vertices.size() * sizeof(LineVertex));
-	//pContext->Unmap(lineVertexBuffer, 0);
 
 	initCustomRender = true;
 	printf("[Celestial] rendering initialized.\n");
@@ -332,7 +319,9 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 	pContext->Unmap(constVMatrixBuffer, 0);
 
 	DrawLine(pContext, ppLog.recordingPath.nodes);
-	DrawLine(pContext, ppLog.displayedPaths[0].nodes);
+
+	for (int i = 0; i < ppLog.displayedPaths.size(); i++)
+		DrawLine(pContext, ppLog.displayedPaths[i].nodes);
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -646,15 +635,15 @@ void celestial::RenderGUI()
 		if (!ImGui::Begin("PathLog", (bool*)&currentConfig.showUI, window_flags)) { ImGui::End(); return; }
 	}
 
-	if (ImGui::Checkbox("Direct Mode", (bool*) &currentConfig.directMode));
+	if (ImGui::Checkbox("Direct Recording Mode", (bool*) &currentConfig.directMode));
 
 	if (ImGui::CollapsingHeader("Keybinds"))
 	{
-		GUIKeybind(io ,"Toggle Menu:", currentConfig.toggleWindowKeybind, rebindingKey[0]);
-		GUIKeybind(io, "Spawn Start Trigger:", currentConfig.startKeybind, rebindingKey[1]);
-		GUIKeybind(io, "Spawn Stop Trigger:", currentConfig.stopKeybind, rebindingKey[2]);
-		GUIKeybind(io, "Reset Recording:", currentConfig.resetKeybind, rebindingKey[3]);
-		GUIKeybind(io, "Clear Paths:", currentConfig.clearKeybind, rebindingKey[4]);
+		GUIKeybind(io ,"Toggle Menu:", currentConfig.toggleWindowKeybind, 0);
+		GUIKeybind(io, "Spawn Start Trigger:", currentConfig.startKeybind, 1);
+		GUIKeybind(io, "Spawn Stop Trigger:", currentConfig.stopKeybind, 2);
+		GUIKeybind(io, "Reset Recording:", currentConfig.resetKeybind, 3);
+		GUIKeybind(io, "Clear Paths:", currentConfig.clearKeybind, 4);
 	}
 
 	ImGui::Separator();
@@ -676,9 +665,12 @@ void celestial::RenderGUI()
 	ImGui::End();
 }
 
-void GUIKeybind(ImGuiIO& io, const char* name, uint32_t& keybind, bool& rebinding)
+void GUIKeybind(ImGuiIO& io, const char* name, uint32_t& keybind, int rebindingIndex)
 {
 	//ImGuiIO& io = ImGui::GetIO();
+
+	if (!std::count(currentKeybinds.begin(), currentKeybinds.end(), keybind))
+		currentKeybinds.push_back(keybind);
 
 	char keyName[64];
 	UINT scanCode = MapVirtualKey(keybind, MAPVK_VK_TO_VSC);
@@ -704,34 +696,36 @@ void GUIKeybind(ImGuiIO& io, const char* name, uint32_t& keybind, bool& rebindin
 
 	ImGui::Indent((ImGui::GetWindowSize().x - GUI_BUTTON_SIZE));
 
-	if (!rebinding)
+	if (rebindingKey[rebindingIndex])
 	{
-		if (ImGui::Button(keyName, ImVec2(GUI_BUTTON_SIZE, 24.0f)))
+		ImGui::Button("... (ESC To Cancel)", ImVec2(GUI_BUTTON_SIZE, 24.0f));
+
+		for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++)
 		{
-			bool alreadyRebinding = false;
+			if (!io.KeysDown[i]) continue;
 
-			for (int i = 0; i < KEYBIND_COUNT; i++)
-				alreadyRebinding = alreadyRebinding || rebindingKey[i];
+			rebindingKey[rebindingIndex] = false;
 
-			if (!alreadyRebinding) rebinding = true;
+			if (i == VK_ESCAPE) break;
+			if (std::count(currentKeybinds.begin(), currentKeybinds.end(), i)) break;
+
+			keybind = i;
+			break;
 		}
 
 		ImGui::Unindent((ImGui::GetWindowSize().x - GUI_BUTTON_SIZE));
 		return;
 	}
 
-	ImGui::Button("... (ESC To Cancel)", ImVec2(GUI_BUTTON_SIZE, 24.0f));
-
-	for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++)
+	if (ImGui::Button(keyName, ImVec2(GUI_BUTTON_SIZE, 24.0f)))
 	{
-		if (!io.KeysDown[i]) continue;
+		bool alreadyRebinding = false;
 
-		rebinding = false;
+		for (int i = 0; i < KEYBIND_COUNT; i++)
+			alreadyRebinding = alreadyRebinding || rebindingKey[i];
 
-		if (i == VK_ESCAPE) break;
-
-		keybind = i;
-		break;
+		if (!alreadyRebinding)
+			rebindingKey[rebindingIndex] = true;
 	}
 
 	ImGui::Unindent((ImGui::GetWindowSize().x - GUI_BUTTON_SIZE));

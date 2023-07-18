@@ -31,7 +31,7 @@ void pathlog::Init(PLogState& state)
 		printf("[PathLog] ERROR: Paths directory not found");
 		exit(1);
 	}
-
+	
 	// debug
 	//ReadPathFile(pathlog::GetPathsDirectory() + "test_2.p", state.displayedPaths);
 }
