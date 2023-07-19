@@ -201,12 +201,12 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	printf("[Celestial] rendering initialized.\n");
 }
 
-void DrawLine(ID3D11DeviceContext* pContext, std::vector<Vector3> nodes)
+void DrawLine(ID3D11DeviceContext* pContext, std::vector<Vector3> nodes, DirectX::XMFLOAT4 color, float thiccness)
 {
 	if (nodes.size() < 2) return;
 
 	std::vector<LineVertex> vertices;
-	celestial::CreateLineVertexBuffer(nodes, DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), 0.02f, vertices);
+	celestial::CreateLineVertexBuffer(nodes, color, thiccness, vertices);
 
 	D3D11_MAPPED_SUBRESOURCE vms;
 	pContext->Map(lineVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vms);
@@ -318,10 +318,19 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 	memcpy(vms.pData, &VsConstData, sizeof(VS_CONSTANT_BUFFER));
 	pContext->Unmap(constVMatrixBuffer, 0);
 
-	DrawLine(pContext, ppLog.recordingPath.nodes);
+	DrawLine(pContext, ppLog.recordingPath.nodes, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.02f);
 
 	for (int i = 0; i < ppLog.displayedPaths.size(); i++)
-		DrawLine(pContext, ppLog.displayedPaths[i].nodes);
+		DrawLine(pContext, ppLog.displayedPaths[i].nodes, DirectX::XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f), 0.02f);
+
+	for (int i = 0; i < ppLog.comparedPaths.size(); i++)
+	{
+		if (i == 0) DrawLine(pContext, ppLog.comparedPaths[i].nodes, DirectX::XMFLOAT4(0.9f, 0.7f, 0.5f, 1.0f), 0.05f);
+		else DrawLine(pContext, ppLog.comparedPaths[i].nodes, DirectX::XMFLOAT4(	0.0f + i / ((float)ppLog.comparedPaths.size() * 1.43f),
+																					0.7f - i / ((float)ppLog.comparedPaths.size() * 1.43f),
+																					0.0f,
+																					1.0f), 0.02f);
+	}
 
 	for (int i = 0; i < 2; i++)
 	{

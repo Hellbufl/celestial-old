@@ -13,18 +13,12 @@ void pathlog::Init(PLogState& state)
 	state.triggerState[0] = 0;
 	state.triggerState[1] = 0;
 
-	//state.outFileName = OUT_FILE_NAME;
-	//state.outFileType = OUT_FILE_TYPE;
-
 	state.triggerSize.x = 1.0f;
 	state.triggerSize.y = 1.0f;
 	state.triggerSize.z = 1.0f;
 
 	state.displayedPaths = {};
 	state.comparedPaths = {};
-
-	//state.recordingFilename = state.outFileName + state.outFileType;
-	//state.currentFilePath = GetPathsDirectory() + state.recordingFilename;
 
 	if (CreateDirectory(PATH_FILE_DIR, NULL) == ERROR_PATH_NOT_FOUND)
 	{
@@ -33,7 +27,7 @@ void pathlog::Init(PLogState& state)
 	}
 	
 	// debug
-	//ReadPathFile(pathlog::GetPathsDirectory() + "test_2.p", state.displayedPaths);
+	//ReadPathFile(pathlog::GetPathsDirectory() + "pathlog.p", state.displayedPaths);
 }
 
 void pathlog::Update(PLogState& state, Vector3* playerPos, Vector3* playerRot)
@@ -41,8 +35,10 @@ void pathlog::Update(PLogState& state, Vector3* playerPos, Vector3* playerRot)
 	for (int i = 0; i < 2; i++)
 	{
 		if (state.triggerState[i] != 1) continue;
-		
-		CreateBoxTrigger(playerPos, playerRot, state.triggerSize, state.recordingTrigger[i]);
+
+		if (state.comparedPaths.empty())
+			CreateBoxTrigger(playerPos, playerRot, state.triggerSize, state.recordingTrigger[i]);
+
 		state.triggerState[i] = 2;
 	}
 
@@ -85,7 +81,6 @@ void pathlog::Update(PLogState& state, Vector3* playerPos, Vector3* playerRot)
 	if (!state.recording) return;
 
 	state.recordingPath.nodes.push_back(*playerPos);
-	//printf("[PathLog] DEBUG: Position logged. Path size: %d\n", state.recordingPath.nodes.size());
 }
 
 void pathlog::ReadPathFile(std::string filepath, std::vector<Path>& destination)
@@ -103,17 +98,9 @@ void pathlog::ReadPathFile(std::string filepath, std::vector<Path>& destination)
 	std::streamsize fileSize = pathFile.tellg();
 	pathFile.seekg(0, std::ios::beg);
 
-	int nodeCount = (fileSize - PATH_FILE_OFFSET) / sizeof(Vector3);
+	//int nodeCount = (fileSize - PATH_FILE_OFFSET) / sizeof(Vector3);
 
-	if (nodeCount < 2)
-	{
-		printf("[PathLog] ERROR: empty path discarded:\n");
-		printf("%s\n", filepath.c_str());
-		return;
-	}
-
-	Path newPath;
-	newPath.nodes.reserve(nodeCount);
+	
 	char* buffer = new char[fileSize];
 
 	if (!pathFile.read(buffer, fileSize))
@@ -129,17 +116,35 @@ void pathlog::ReadPathFile(std::string filepath, std::vector<Path>& destination)
 		return;
 	}
 
-	for (int i = PATH_FILE_OFFSET; i < nodeCount; i++)
+	uint32_t nodeCount = *((uint32_t*) buffer + 1);
+
+	if (nodeCount < 2)
 	{
-		newPath.nodes.push_back(*((Vector3*)buffer + i));
+		printf("[PathLog] ERROR: empty path discarded:\n");
+		printf("%s\n", filepath.c_str());
+		return;
+	}
+
+	Path newPath;
+	newPath.nodes.reserve(nodeCount);
+
+	for (int i = 0; i < nodeCount; i++)
+	{
+		newPath.nodes.push_back(*((Vector3*)(buffer + PATH_FILE_OFFSET) + i));
 	}
 
 	newPath.time = *(uint64_t*) (buffer + 4);
 
-	pathFile.close();
 	destination.push_back(newPath);
 
+	pathFile.close();
+
 	printf("[PathLog] path of size %d read succussfully!\n", (int)newPath.nodes.size());
+}
+
+void ReadCompFile(PLogState& state, std::string filename)
+{
+
 }
 
 void pathlog::StartRecording(PLogState& state)
@@ -213,17 +218,45 @@ void pathlog::StopRecording(PLogState& state, bool direct)
 		return;
 	}
 
+	uint32_t nodeCount = state.recordingPath.nodes.size();
+
 	newPathFile.write("PATH", sizeof(char) * 4);
-	newPathFile.write((char*)&timeRecorded, sizeof(uint64_t));
+	newPathFile.write((char*) &nodeCount, sizeof(uint32_t));
+	newPathFile.write((char*) &timeRecorded, sizeof(uint64_t));
 
 	//for (int i = 0; i < state.recordingPath.nodes.size(); i++)
-	newPathFile.write((char*) state.recordingPath.nodes.data(), sizeof(Vector3) * state.recordingPath.nodes.size());
+	newPathFile.write((char*) state.recordingPath.nodes.data(), sizeof(Vector3) * nodeCount);
 
 	newPathFile.close();
 
-	printf("[PathLog] saved path of size: %lld\n", state.recordingPath.nodes.size());
+	state.recordingPath.time = timeRecorded;
+
+	if (direct)
+		state.displayedPaths.push_back(state.recordingPath);
+	else
+		InsertRecording(state, state.recordingPath);
+
+	state.recordingPath.nodes.clear();
+	state.recordingPath.time = 0;
+
+	printf("[PathLog] saved path of size: %lld\n", nodeCount);
 	printf("[PathLog] recording stopped.\n");
 }
+
+// inserts a new path into the comparison, keeping the array sorted
+void pathlog::InsertRecording(PLogState &state, Path &newPath)
+{
+	state.comparedPaths.push_back(newPath);
+
+	for (int i = state.comparedPaths.size() - 1; i > 0; i--)
+	{
+		if (state.comparedPaths[i - 1].time < newPath.time) return;
+		
+		state.comparedPaths[i] = state.comparedPaths[i - 1];
+		state.comparedPaths[i - 1] = newPath;
+	}
+}
+
 
 void CreateBoxTrigger(Vector3* pos, Vector3* rot, Vector3 size, BoxTrigger& destTrigger)
 {
@@ -231,6 +264,7 @@ void CreateBoxTrigger(Vector3* pos, Vector3* rot, Vector3 size, BoxTrigger& dest
 	if (rot == nullptr) return;
 
 	destTrigger.pos = *pos;
+	//destTrigger.pos.y += size.y;
 
 	destTrigger.basis = Matrix3(	Vector3(cos(rot->y), 0.0f, sin(rot->y)),
 									Vector3(0.0f, 1.0f, 0.0f),
@@ -248,7 +282,7 @@ void CreateBoxTrigger(Vector3* pos, Vector3* rot, Vector3 size, BoxTrigger& dest
 		delta.y = ((i >> 2) & 1) * 2 - 1;
 		delta.z = ((i >> 1) & 1) * 2 - 1;
 
-		destTrigger.points[i] = *pos + destTrigger.inverseBasis * delta * size;
+		destTrigger.points[i] = destTrigger.pos + destTrigger.inverseBasis * delta * size;
 	}
 
 	printf("[PathLog] trigger created successgully\n");
