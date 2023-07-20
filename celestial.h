@@ -6,6 +6,7 @@
 #include <ocular.h>
 #include <DirectXMath.h>
 #include <chrono>
+#include <map>
 #include "ReadData.h"
 #include "pathlog.h"
 #include "gamedata.h"
@@ -16,7 +17,7 @@
 #include "imgui/imgui_impl_dx11.h"
 
 #define TICKRATE 25
-#define MAX_VERTS 32768
+#define MAX_BOX_VERTS 1024
 #define GUI_BUTTON_SIZE 150
 #define KEYBIND_COUNT 5
 
@@ -56,7 +57,7 @@ namespace celestial
 	void hkOMSetRenderTargets(ID3D11DeviceContext* pDeviceContext, UINT NumViews, ID3D11RenderTargetView* const* ppRenderTargetViews, ID3D11DepthStencilView* pDepthStencilView);
 
 	void CreateLineVertexBuffer(std::vector<Vector3> pathNodes, DirectX::XMFLOAT4 color, float lineThickness, std::vector<LineVertex>& destBuffer);
-	void CreateBoxVertexBuffer(std::vector<Vector3> points, DirectX::XMFLOAT4 color, std::vector<BoxVertex>& destBuffer);
+	void CreateBoxVertexBuffer(std::vector<Vector3> points, DirectX::XMFLOAT4 color, std::vector<BoxVertex> &destBuffer);
 
 	void RenderGUI();
 	void KeyPress(WPARAM key);

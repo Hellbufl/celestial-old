@@ -44,6 +44,13 @@ WNDPROC oWndProc;
 bool rebindingKey[KEYBIND_COUNT];
 std::vector<uint32_t> currentKeybinds;
 
+std::map<uint64_t, bool> pathMute;
+std::map<uint64_t, bool> pathSolo;
+std::map<uint64_t, bool> compMute;
+std::map<uint64_t, bool> compSolo;
+int pathSoloActive;
+int compSoloActive;
+
 void celestial::MainLoop()
 {
 	bool running = true;
@@ -52,6 +59,9 @@ void celestial::MainLoop()
 
 	Vector3* playerPos;
 	Vector3* playerRot;
+	
+	//Debug
+	//Sleep(15000);
 
 	while (running)
 	{
@@ -60,8 +70,8 @@ void celestial::MainLoop()
 
 		lastTick = std::chrono::high_resolution_clock::now();
 
-		playerPos = GameData::GetPlayerPosition(processStartPtr);
-		playerRot = GameData::GetPlayerRotation(processStartPtr);
+		playerPos = gamedata::GetPlayerPosition(processStartPtr);
+		playerRot = gamedata::GetPlayerRotation(processStartPtr);
 
 		pathlog::Update(ppLog, playerPos, playerRot);
 	}
@@ -115,7 +125,7 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	D3D11_BUFFER_DESC lineVertexBufferDesc;
 	ZeroMemory(&lineVertexBufferDesc, sizeof(lineVertexBufferDesc));
 	lineVertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	lineVertexBufferDesc.ByteWidth = sizeof(LineVertex) * MAX_VERTS;
+	lineVertexBufferDesc.ByteWidth = sizeof(LineVertex) * MAX_PATH_NODES * 6;
 	lineVertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	lineVertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
@@ -130,7 +140,7 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	D3D11_BUFFER_DESC boxVertexBufferDesc;
 	ZeroMemory(&boxVertexBufferDesc, sizeof(boxVertexBufferDesc));
 	boxVertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	boxVertexBufferDesc.ByteWidth = sizeof(BoxVertex) * MAX_VERTS;
+	boxVertexBufferDesc.ByteWidth = sizeof(BoxVertex) * MAX_BOX_VERTS;
 	boxVertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	boxVertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
@@ -308,7 +318,7 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 	pContext->OMSetBlendState(blendState, NULL, 0xffffffff);
 	pContext->OMSetDepthStencilState(depthStencilState, 1);
 
-	Matrix4* viewMatrix = GameData::GetViewMatrix(processStartPtr);
+	Matrix4* viewMatrix = gamedata::GetViewMatrix(processStartPtr);
 
 	VS_CONSTANT_BUFFER VsConstData;
 	VsConstData.mWorldViewProj = DirectX::XMFLOAT4X4(viewMatrix->mm);
@@ -321,10 +331,18 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 	DrawLine(pContext, ppLog.recordingPath.nodes, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.02f);
 
 	for (int i = 0; i < ppLog.displayedPaths.size(); i++)
+	{
+		if (!pathSoloActive && pathMute[ppLog.displayedPaths[i].id]) continue;
+		if (pathSoloActive && !pathSolo[ppLog.displayedPaths[i].id]) continue;
+
 		DrawLine(pContext, ppLog.displayedPaths[i].nodes, DirectX::XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f), 0.02f);
+	}
 
 	for (int i = 0; i < ppLog.comparedPaths.size(); i++)
 	{
+		if (!compSoloActive && compMute[ppLog.comparedPaths[i].id]) continue;
+		if (compSoloActive && !compSolo[ppLog.comparedPaths[i].id]) continue;
+
 		if (i == 0) DrawLine(pContext, ppLog.comparedPaths[i].nodes, DirectX::XMFLOAT4(0.9f, 0.7f, 0.5f, 1.0f), 0.05f);
 		else DrawLine(pContext, ppLog.comparedPaths[i].nodes, DirectX::XMFLOAT4(	0.0f + i / ((float)ppLog.comparedPaths.size() * 1.43f),
 																					0.7f - i / ((float)ppLog.comparedPaths.size() * 1.43f),
@@ -457,12 +475,8 @@ void celestial::hkOMSetRenderTargets(ID3D11DeviceContext* pDeviceContext, UINT N
 // takes a list of points and outputs a vertex buffer to draw a line between these points
 void celestial::CreateLineVertexBuffer(std::vector<Vector3> nodes, DirectX::XMFLOAT4 color, float lineThickness, std::vector<LineVertex>& destBuffer)
 {
-	if (nodes.size() < 2)
-	{
-		printf("[Celestial] ERROR: CreateLineVertexBuffer needs at least 2 nodes\n");
-		Sleep(2000);
-		exit(1);
-	}
+	if (nodes.size() < 2) return;
+	if (nodes.size() > MAX_PATH_NODES) return;
 
 	for (size_t i = 0; i < nodes.size() - 1; i++)
 	{
@@ -592,6 +606,181 @@ void celestial::CreateBoxVertexBuffer(std::vector<Vector3> points, DirectX::XMFL
 	}
 }
 
+void GUIPathsTab()
+{
+	if (!ImGui::BeginTabItem("Paths")) return;
+
+	ImGuiIO& io = ImGui::GetIO();
+
+	if (ImGui::CollapsingHeader("Comparison"))
+	{
+		for (int i = 0; i < ppLog.comparedPaths.size(); i++)
+		{
+			compMute.try_emplace(ppLog.comparedPaths[i].id, false);
+			compSolo.try_emplace(ppLog.comparedPaths[i].id, false);
+
+			ImGui::PushID(ppLog.comparedPaths[i].id);
+
+			if (compMute[ppLog.comparedPaths[i].id])
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.5f));
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.3f));
+			}
+
+			if (ImGui::Button("M", ImVec2(20.0f, 20.0f)))
+			{
+				compMute[ppLog.comparedPaths[i].id] ^= true;
+			}
+
+			ImGui::PopStyleColor(2);
+
+			ImGui::SameLine();
+
+			if (compSolo[ppLog.comparedPaths[i].id])
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.15f, 0.6f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.15f, 0.6f, 0.5f));
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.3f));
+			}
+
+			if (ImGui::Button("S", ImVec2(20.0f, 20.0f)))
+			{
+				compSolo[ppLog.comparedPaths[i].id] ^= true;
+
+				if (compSolo[ppLog.comparedPaths[i].id])
+					++compSoloActive;
+				else
+					--compSoloActive;
+			}
+
+			ImGui::PopStyleColor(2);
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 50);
+
+			if (ImGui::Button("X", ImVec2(20.0f, 20.0f)))
+			{
+				ppLog.comparedPaths.erase(ppLog.comparedPaths.begin() + i);
+			}
+
+			ImGui::PopID();
+
+			ImGui::Separator();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Seperate Paths"))
+	{
+		for (int i = 0; i < ppLog.displayedPaths.size(); i++)
+		{
+			pathMute.try_emplace(ppLog.displayedPaths[i].id, false);
+			pathSolo.try_emplace(ppLog.displayedPaths[i].id, false);
+
+			ImGui::PushID(ppLog.displayedPaths[i].id);
+
+			if (pathMute[ppLog.displayedPaths[i].id])
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.5f));
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.3f));
+			}
+
+			if (ImGui::Button("M", ImVec2(20.0f, 20.0f)))
+			{
+				pathMute[ppLog.displayedPaths[i].id] ^= true;
+			}
+
+			ImGui::PopStyleColor(2);
+
+			ImGui::SameLine();
+
+			if (pathSolo[ppLog.displayedPaths[i].id])
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.15f, 0.6f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.15f, 0.6f, 0.5f));
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.3f));
+			}
+
+			if (ImGui::Button("S", ImVec2(20.0f, 20.0f)))
+			{
+				pathSolo[ppLog.displayedPaths[i].id] ^= true;
+
+				if (pathSolo[ppLog.displayedPaths[i].id])
+					++pathSoloActive;
+				else
+					--pathSoloActive;
+			}
+
+			ImGui::PopStyleColor(2);
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 50);
+
+			if (ImGui::Button("X", ImVec2(20.0f, 20.0f)))
+			{
+				ppLog.displayedPaths.erase(ppLog.displayedPaths.begin() + i);
+			}
+
+			ImGui::PopID();
+
+			ImGui::Separator();
+		}
+	}
+
+	ImGui::EndTabItem();
+}
+
+void GUIConfigTab()
+{
+	if (!ImGui::BeginTabItem("Config")) return;
+
+	ImGuiIO& io = ImGui::GetIO();
+
+	if (ImGui::Checkbox("Direct Recording Mode", (bool*)&currentConfig.directMode));
+
+	if (ImGui::CollapsingHeader("Keybinds"))
+	{
+		GUIKeybind(io, "Toggle Menu:", currentConfig.toggleWindowKeybind, 0);
+		GUIKeybind(io, "Spawn Start Trigger:", currentConfig.startKeybind, 1);
+		GUIKeybind(io, "Spawn Stop Trigger:", currentConfig.stopKeybind, 2);
+		GUIKeybind(io, "Reset Recording:", currentConfig.resetKeybind, 3);
+		GUIKeybind(io, "Clear Paths:", currentConfig.clearKeybind, 4);
+	}
+
+	ImGui::Separator();
+
+	ImGui::Indent((ImGui::GetWindowSize().x - GUI_BUTTON_SIZE) / 2);
+
+	if (ImGui::Button("Save Config", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
+	{
+		config::WriteConfig(currentConfig);
+	}
+
+	if (ImGui::Button("Load Config", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
+	{
+		config::ReadConfig(currentConfig);
+	}
+
+	ImGui::Unindent((ImGui::GetWindowSize().x - GUI_BUTTON_SIZE) / 2);
+
+	ImGui::EndTabItem();
+}
+
 void celestial::RenderGUI()
 {
 	if (!initImGui) return;
@@ -644,32 +833,16 @@ void celestial::RenderGUI()
 		if (!ImGui::Begin("PathLog", (bool*)&currentConfig.showUI, window_flags)) { ImGui::End(); return; }
 	}
 
-	if (ImGui::Checkbox("Direct Recording Mode", (bool*) &currentConfig.directMode));
-
-	if (ImGui::CollapsingHeader("Keybinds"))
+	ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+	if (ImGui::BeginTabBar("Tabs", tab_bar_flags))
 	{
-		GUIKeybind(io ,"Toggle Menu:", currentConfig.toggleWindowKeybind, 0);
-		GUIKeybind(io, "Spawn Start Trigger:", currentConfig.startKeybind, 1);
-		GUIKeybind(io, "Spawn Stop Trigger:", currentConfig.stopKeybind, 2);
-		GUIKeybind(io, "Reset Recording:", currentConfig.resetKeybind, 3);
-		GUIKeybind(io, "Clear Paths:", currentConfig.clearKeybind, 4);
+		GUIPathsTab();
+		GUIConfigTab();
+		//CustomizationTab();
+		//DebugTab();
+		//CreditsTab();
+		ImGui::EndTabBar();
 	}
-
-	ImGui::Separator();
-
-	ImGui::Indent((ImGui::GetWindowSize().x - GUI_BUTTON_SIZE) / 2);
-
-	if (ImGui::Button("Save Config", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
-	{
-		config::WriteConfig(currentConfig);
-	}
-
-	if (ImGui::Button("Load Config", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
-	{
-		config::ReadConfig(currentConfig);
-	}
-
-	ImGui::Unindent((ImGui::GetWindowSize().x - GUI_BUTTON_SIZE) / 2);
 
 	ImGui::End();
 }
@@ -775,6 +948,8 @@ void celestial::KeyPress(WPARAM key)
 	if (key == currentConfig.clearKeybind)
 	{
 		ppLog.displayedPaths.clear();
+		ppLog.comparedPaths.clear();
+		ppLog.currentCompFileName = "";
 		return;
 	}
 }
@@ -785,7 +960,7 @@ void DrawDebug(ImColor color, float thickness)
 {
 	ImDrawList* drawList = ImGui::GetForegroundDrawList();
 
-	Matrix4* viewMatrix = GameData::GetViewMatrix(processStartPtr);
+	Matrix4* viewMatrix = gamedata::GetViewMatrix(processStartPtr);
 
 	// Trigger
 

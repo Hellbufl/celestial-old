@@ -8,7 +8,7 @@
 #define NA_PLAYER_ROT_OFF_0 0x01020BE0ull
 #define NA_PLAYER_ROT_OFF_1 0x90ull
 
-namespace GameData
+namespace gamedata
 {
 	Matrix4* GetViewMatrix(uint64_t processStart);
 	Vector3* GetPlayerPosition(uint64_t processStart);

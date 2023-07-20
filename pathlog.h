@@ -9,6 +9,7 @@
 
 #include "linalg.h"
 
+#define MAX_PATH_NODES 9000
 #define PATHS_FOLDER "Paths"
 #define PATH_FILE_DIR L"Paths"
 #define PATH_FILE_NAME "pathlog"
@@ -21,6 +22,7 @@ struct Path
 {
 	std::vector<Vector3> nodes;
 	uint64_t time;
+	uint64_t id;
 };
 
 struct BoxTrigger
@@ -43,8 +45,11 @@ struct PLogState
 	std::vector<Path> displayedPaths;
 	std::vector<Path> comparedPaths;
 
+	std::string currentCompFileName;
+	uint64_t currentPathID;
+
 	BoxTrigger recordingTrigger[2];
-	Vector3 triggerSize;
+	Vector3 triggerSize[2];
 	int triggerState[2];
 
 	bool playerInTrigger[2];
@@ -54,16 +59,18 @@ struct PLogState
 
 namespace pathlog
 {
-	void Init(PLogState &state);
+	void Init(PLogState& state);
 
-	void Update(PLogState &state, Vector3* pos, Vector3* rot);
+	void Update(PLogState& state, Vector3* pos, Vector3* rot);
 
-	void ReadPathFile(std::string filename, std::vector<Path>& destination);
-	void ReadCompFile(PLogState &state, std::string filename);
+	void ReadPathFile(std::string fileName, uint64_t& pathID, std::vector<Path>& destination);
+	void WritePathFile(std::string fileName, std::string fileType, Path& source);
+	void ReadCompFile(PLogState& state, std::string fileName);
+	void CreateCompFile(PLogState& state);
 
-	void StartRecording(PLogState &state);
-	void ResetRecording(PLogState &state);
-	void StopRecording(PLogState &state, bool direct);
+	void StartRecording(PLogState& state);
+	void ResetRecording(PLogState& state);
+	void StopRecording(PLogState& state, bool direct);
 
 	void InsertRecording(PLogState& state, Path& newPath);
 
