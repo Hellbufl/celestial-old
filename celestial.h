@@ -16,7 +16,9 @@
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_impl_dx11.h"
 
-#define TICKRATE 25
+#include "nfd.h"
+
+#define TICKRATE 30
 #define MAX_BOX_VERTS 1024
 #define GUI_BUTTON_SIZE 150
 #define KEYBIND_COUNT 5

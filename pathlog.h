@@ -37,6 +37,7 @@ struct PLogState
 {
 	bool primed;
 	bool recording;
+	bool direct;
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> recordingStart;
 
@@ -45,7 +46,7 @@ struct PLogState
 	std::vector<Path> displayedPaths;
 	std::vector<Path> comparedPaths;
 
-	std::string currentCompFileName;
+	std::string currentCompFilePath;
 	uint64_t currentPathID;
 
 	BoxTrigger recordingTrigger[2];
@@ -53,6 +54,7 @@ struct PLogState
 	int triggerState[2];
 
 	bool playerInTrigger[2];
+	//int lastTrigger;
 
 	std::vector<Vector3> debugLines;
 };
@@ -63,14 +65,14 @@ namespace pathlog
 
 	void Update(PLogState& state, Vector3* pos, Vector3* rot);
 
-	void ReadPathFile(std::string fileName, uint64_t& pathID, std::vector<Path>& destination);
+	void ReadPathFile(std::string filePath, uint64_t& pathID, std::vector<Path>& destination);
 	void WritePathFile(std::string fileName, std::string fileType, Path& source);
-	void ReadCompFile(PLogState& state, std::string fileName);
+	void ReadCompFile(PLogState& state, std::string filePath);
 	void CreateCompFile(PLogState& state);
 
 	void StartRecording(PLogState& state);
 	void ResetRecording(PLogState& state);
-	void StopRecording(PLogState& state, bool direct);
+	void StopRecording(PLogState& state);
 
 	void InsertRecording(PLogState& state, Path& newPath);
 

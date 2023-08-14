@@ -1,5 +1,10 @@
 #include "celestial.h"
 
+void DrawLine(ID3D11DeviceContext* pContext, std::vector<Vector3> nodes, DirectX::XMFLOAT4 color, float thiccness);
+void DrawBox(ID3D11DeviceContext* pContext, std::vector<Vector3> boxPoints);
+
+void GUIPathsTab();
+void GUIConfigTab();
 void GUIKeybind(ImGuiIO& io, const char* name, uint32_t& keybind, int rebindingIndex);
 
 // DEBUG //
@@ -44,6 +49,8 @@ WNDPROC oWndProc;
 bool rebindingKey[KEYBIND_COUNT];
 std::vector<uint32_t> currentKeybinds;
 
+uint64_t selectedPath;
+
 std::map<uint64_t, bool> pathMute;
 std::map<uint64_t, bool> pathSolo;
 std::map<uint64_t, bool> compMute;
@@ -61,7 +68,17 @@ void celestial::MainLoop()
 	Vector3* playerRot;
 	
 	//Debug
-	//Sleep(15000);
+	//nfdchar_t* outPath = NULL;
+	//nfdresult_t result = NFD_OpenDialog(NULL, NULL, &outPath);
+
+	//if (result == NFD_OKAY)
+	//{
+	//	free(outPath);
+	//}
+	//else if (result != NFD_CANCEL)
+	//{
+	//	printf("[Celestial] ERROR: %s\n", NFD_GetError());
+	//}
 
 	while (running)
 	{
@@ -237,13 +254,13 @@ void DrawLine(ID3D11DeviceContext* pContext, std::vector<Vector3> nodes, DirectX
 	pContext->Draw(vertices.size(), 0);
 }
 
-void DrawBox(ID3D11DeviceContext* pContext, std::vector<Vector3> boxPoints)
+void DrawBox(ID3D11DeviceContext* pContext, std::vector<Vector3> boxPoints, DirectX::XMFLOAT4 color)
 {
 	if (boxPoints.size() != 8) return;
 
 	std::vector<BoxVertex> boxVertices;
 
-	celestial::CreateBoxVertexBuffer(boxPoints, DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 0.5f), boxVertices);
+	celestial::CreateBoxVertexBuffer(boxPoints, color, boxVertices);
 
 	D3D11_MAPPED_SUBRESOURCE vms;
 	HRESULT pResult = pContext->Map(boxVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vms);
@@ -332,6 +349,12 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 
 	for (int i = 0; i < ppLog.displayedPaths.size(); i++)
 	{
+		if (selectedPath == ppLog.displayedPaths[i].id)
+		{
+			DrawLine(pContext, ppLog.displayedPaths[i].nodes, DirectX::XMFLOAT4(0.5f, 0.7f, 0.9f, 1.0f), 0.05f);
+			continue;
+		}
+
 		if (!pathSoloActive && pathMute[ppLog.displayedPaths[i].id]) continue;
 		if (pathSoloActive && !pathSolo[ppLog.displayedPaths[i].id]) continue;
 
@@ -340,6 +363,12 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 
 	for (int i = 0; i < ppLog.comparedPaths.size(); i++)
 	{
+		if (selectedPath == ppLog.comparedPaths[i].id)
+		{
+			DrawLine(pContext, ppLog.comparedPaths[i].nodes, DirectX::XMFLOAT4(0.5f, 0.7f, 0.9f, 1.0f), 0.05f);
+			continue;
+		}
+
 		if (!compSoloActive && compMute[ppLog.comparedPaths[i].id]) continue;
 		if (compSoloActive && !compSolo[ppLog.comparedPaths[i].id]) continue;
 
@@ -357,7 +386,7 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 		std::vector<Vector3> boxPoints;
 		for (int p = 0; p < 8; p++) boxPoints.push_back(ppLog.recordingTrigger[i].points[p]);
 
-		DrawBox(pContext, boxPoints);
+		DrawBox(pContext, boxPoints, DirectX::XMFLOAT4(0.85f, 0.55f, 0.27f, 1.0f));
 	}
 
 	ImGui_ImplDX11_NewFrame();
@@ -664,6 +693,40 @@ void GUIPathsTab()
 
 			ImGui::PopStyleColor(2);
 
+			ImGui::SameLine();
+
+			if (selectedPath == ppLog.comparedPaths[i].id)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.59f, 0.44f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.59f, 0.44f, 0.5f));
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.3f));
+			}
+
+			std::string timeMinutes = std::to_string(ppLog.comparedPaths[i].time / 60000);
+			std::string timeSeconds = std::to_string((ppLog.comparedPaths[i].time % 60000) / 1000);
+			std::string timeMilliseconds = std::to_string(ppLog.comparedPaths[i].time % 1000);
+
+			while (timeMinutes.length() < 2) timeMinutes = "0" + timeMinutes;
+			while (timeSeconds.length() < 2) timeSeconds = "0" + timeSeconds;
+			while (timeMilliseconds.length() < 3) timeMilliseconds = "0" + timeMilliseconds;
+
+			std::string timeDisplayed = timeSeconds + "." + timeMilliseconds;
+			if (timeMinutes != "00") timeDisplayed = timeMinutes + ":" + timeDisplayed;
+
+			if (ImGui::Button(timeDisplayed.c_str(), ImVec2(150.0f, 20.0f)))
+			{
+				if (selectedPath == ppLog.comparedPaths[i].id)
+					selectedPath = 0;
+				else
+					selectedPath = ppLog.comparedPaths[i].id;
+			}
+
+			ImGui::PopStyleColor(2);
+
 			ImGui::SameLine(ImGui::GetWindowWidth() - 50);
 
 			if (ImGui::Button("X", ImVec2(20.0f, 20.0f)))
@@ -729,6 +792,40 @@ void GUIPathsTab()
 
 			ImGui::PopStyleColor(2);
 
+			ImGui::SameLine();
+
+			if (selectedPath == ppLog.displayedPaths[i].id)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.59f, 0.44f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.59f, 0.44f, 0.5f));
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.3f));
+			}
+
+			std::string timeMinutes = std::to_string(ppLog.displayedPaths[i].time / 60000);
+			std::string timeSeconds = std::to_string((ppLog.displayedPaths[i].time % 60000) / 1000);
+			std::string timeMilliseconds = std::to_string(ppLog.displayedPaths[i].time % 1000);
+
+			while (timeMinutes.length() < 2) timeMinutes = "0" + timeMinutes;
+			while (timeSeconds.length() < 2) timeSeconds = "0" + timeSeconds;
+			while (timeMilliseconds.length() < 3) timeMilliseconds = "0" + timeMilliseconds;
+
+			std::string timeDisplayed = timeSeconds + "." + timeMilliseconds;
+			if (timeMinutes != "00") timeDisplayed = timeMinutes + ":" + timeDisplayed;
+
+			if (ImGui::Button(timeDisplayed.c_str(), ImVec2(150.0f, 20.0f)))
+			{
+				if (selectedPath == ppLog.displayedPaths[i].id)
+					selectedPath = 0;
+				else
+					selectedPath = ppLog.displayedPaths[i].id;
+			}
+
+			ImGui::PopStyleColor(2);
+
 			ImGui::SameLine(ImGui::GetWindowWidth() - 50);
 
 			if (ImGui::Button("X", ImVec2(20.0f, 20.0f)))
@@ -742,6 +839,66 @@ void GUIPathsTab()
 		}
 	}
 
+	ImGui::Separator();
+
+	ImGui::Indent((ImGui::GetWindowSize().x - GUI_BUTTON_SIZE) / 2);
+
+	if (ImGui::Button("Load Comparison", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
+	{
+		std::string pathsDir = "" + pathlog::GetPathsDirectory();
+		nfdchar_t* NDFpathsDir = (nfdchar_t*) calloc(pathsDir.size() + 1, sizeof(nfdchar_t));
+
+		if (!NDFpathsDir)
+		{
+			printf("[Celestial] ERROR: calloc failed.\n");
+			return;
+		}
+
+		memcpy(NDFpathsDir, pathsDir.c_str(), pathsDir.size());
+
+		nfdchar_t* outPath = NULL;
+		nfdresult_t result = NFD_OpenDialog(NULL, NDFpathsDir, &outPath);
+
+		if (result == NFD_OKAY)
+		{
+			pathlog::ReadCompFile(ppLog, outPath);
+
+			free(outPath);
+		}
+		else if (result != NFD_CANCEL)
+		{
+			printf("[Celestial] ERROR: %s\n", NFD_GetError());
+		}
+	}
+
+	if (ImGui::Button("Load Seperate Path", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
+	{
+		std::string pathsDir = "" + pathlog::GetPathsDirectory();
+		nfdchar_t* NDFpathsDir = (nfdchar_t*)calloc(pathsDir.size() + 1, sizeof(nfdchar_t));
+
+		if (!NDFpathsDir)
+		{
+			printf("[Celestial] ERROR: calloc failed.\n");
+			return;
+		}
+
+		memcpy(NDFpathsDir, pathsDir.c_str(), pathsDir.size());
+
+		nfdchar_t* outPath = NULL;
+		nfdresult_t result = NFD_OpenDialog(NULL, NDFpathsDir, &outPath);
+
+		if (result == NFD_OKAY)
+		{
+			pathlog::ReadPathFile(outPath, ++ppLog.currentPathID, ppLog.displayedPaths);
+
+			free(outPath);
+		}
+		else if (result != NFD_CANCEL)
+		{
+			printf("[Celestial] ERROR: %s\n", NFD_GetError());
+		}
+	}
+
 	ImGui::EndTabItem();
 }
 
@@ -751,7 +908,7 @@ void GUIConfigTab()
 
 	ImGuiIO& io = ImGui::GetIO();
 
-	if (ImGui::Checkbox("Direct Recording Mode", (bool*)&currentConfig.directMode));
+	if (ImGui::Checkbox("Direct Recording Mode", (bool*)&currentConfig.directMode)) ppLog.direct ^= true;
 
 	if (ImGui::CollapsingHeader("Keybinds"))
 	{
@@ -933,7 +1090,7 @@ void celestial::KeyPress(WPARAM key)
 	if (key == currentConfig.stopKeybind)
 	{
 		if (currentConfig.directMode)
-			pathlog::StopRecording(ppLog, true);
+			pathlog::StopRecording(ppLog);
 		else
 			ppLog.triggerState[1] = 1;
 		return;
@@ -949,7 +1106,7 @@ void celestial::KeyPress(WPARAM key)
 	{
 		ppLog.displayedPaths.clear();
 		ppLog.comparedPaths.clear();
-		ppLog.currentCompFileName = "";
+		ppLog.currentCompFilePath = "";
 		return;
 	}
 }
