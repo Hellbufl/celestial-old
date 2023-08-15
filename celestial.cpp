@@ -1,7 +1,8 @@
 #include "celestial.h"
 
 void DrawLine(ID3D11DeviceContext* pContext, std::vector<Vector3> nodes, DirectX::XMFLOAT4 color, float thiccness);
-void DrawBox(ID3D11DeviceContext* pContext, std::vector<Vector3> boxPoints);
+void DrawBox(ID3D11DeviceContext* pContext, std::vector<Vector3> boxPoints, DirectX::XMFLOAT4 color);
+void DrawBoxOutline(ID3D11DeviceContext* pContext, std::vector<Vector3> boxPoints, DirectX::XMFLOAT4 color, float thickness);
 
 void GUIPathsTab();
 void GUIConfigTab();
@@ -282,6 +283,31 @@ void DrawBox(ID3D11DeviceContext* pContext, std::vector<Vector3> boxPoints, Dire
 	pContext->Draw(boxVertices.size(), 0);
 }
 
+void DrawBoxOutline(ID3D11DeviceContext* pContext, std::vector<Vector3> boxPoints, DirectX::XMFLOAT4 color, float thickness)
+{
+	std::vector<Vector3> outlinePoints;
+
+	outlinePoints.push_back(boxPoints[0]);
+	outlinePoints.push_back(boxPoints[1]);
+	outlinePoints.push_back(boxPoints[3]);
+	outlinePoints.push_back(boxPoints[7]);
+	outlinePoints.push_back(boxPoints[5]);
+	outlinePoints.push_back(boxPoints[4]);
+	outlinePoints.push_back(boxPoints[6]);
+	outlinePoints.push_back(boxPoints[7]);
+	outlinePoints.push_back(boxPoints[3]);
+	outlinePoints.push_back(boxPoints[2]);
+	outlinePoints.push_back(boxPoints[0]);
+	outlinePoints.push_back(boxPoints[4]);
+	outlinePoints.push_back(boxPoints[6]);
+	outlinePoints.push_back(boxPoints[2]);
+	outlinePoints.push_back(boxPoints[0]);
+	outlinePoints.push_back(boxPoints[1]);
+	outlinePoints.push_back(boxPoints[5]);
+
+	DrawLine(pContext, outlinePoints, color, thickness);
+}
+
 HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 {
 	// Get our current device and context
@@ -379,14 +405,22 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 																					1.0f), 0.02f);
 	}
 
-	for (int i = 0; i < 2; i++)
+	if (ppLog.triggerState[0] == 2)
 	{
-		if (ppLog.triggerState[i] != 2) continue;
-
 		std::vector<Vector3> boxPoints;
-		for (int p = 0; p < 8; p++) boxPoints.push_back(ppLog.recordingTrigger[i].points[p]);
+		for (int p = 0; p < 8; p++) boxPoints.push_back(ppLog.recordingTrigger[0].points[p]);
+
+		DrawBox(pContext, boxPoints, DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f));
+		DrawBoxOutline(pContext, boxPoints, DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), 0.03f);
+	}
+
+	if (ppLog.triggerState[1] == 2)
+	{
+		std::vector<Vector3> boxPoints;
+		for (int p = 0; p < 8; p++) boxPoints.push_back(ppLog.recordingTrigger[1].points[p]);
 
 		DrawBox(pContext, boxPoints, DirectX::XMFLOAT4(0.85f, 0.55f, 0.27f, 1.0f));
+		DrawBoxOutline(pContext, boxPoints, DirectX::XMFLOAT4(1.0f, 0.48f, 0.0f, 1.0f), 0.03f);
 	}
 
 	ImGui_ImplDX11_NewFrame();
@@ -1135,17 +1169,17 @@ void DrawDebug(ImColor color, float thickness)
 			ppPoints[i].y = triggerBoxPoints[i].y;
 		}
 
-		drawList->AddLine(ppPoints[0], ppPoints[1], color);
-		drawList->AddLine(ppPoints[0], ppPoints[2], color);
-		drawList->AddLine(ppPoints[0], ppPoints[4], color);
-		drawList->AddLine(ppPoints[1], ppPoints[3], color);
-		drawList->AddLine(ppPoints[1], ppPoints[5], color);
-		drawList->AddLine(ppPoints[2], ppPoints[3], color);
-		drawList->AddLine(ppPoints[2], ppPoints[6], color);
-		drawList->AddLine(ppPoints[3], ppPoints[7], color);
-		drawList->AddLine(ppPoints[4], ppPoints[5], color);
-		drawList->AddLine(ppPoints[4], ppPoints[6], color);
-		drawList->AddLine(ppPoints[5], ppPoints[7], color);
-		drawList->AddLine(ppPoints[6], ppPoints[7], color);
+		drawList->AddLine(ppPoints[0], ppPoints[1], color); // //
+		drawList->AddLine(ppPoints[0], ppPoints[2], color); // //
+		drawList->AddLine(ppPoints[0], ppPoints[4], color); //
+		drawList->AddLine(ppPoints[1], ppPoints[3], color); //
+		drawList->AddLine(ppPoints[1], ppPoints[5], color); //
+		drawList->AddLine(ppPoints[2], ppPoints[3], color); //
+		drawList->AddLine(ppPoints[2], ppPoints[6], color); //
+		drawList->AddLine(ppPoints[3], ppPoints[7], color); // //
+		drawList->AddLine(ppPoints[4], ppPoints[5], color); //
+		drawList->AddLine(ppPoints[4], ppPoints[6], color); // //
+		drawList->AddLine(ppPoints[5], ppPoints[7], color); //
+		drawList->AddLine(ppPoints[6], ppPoints[7], color); //
 	}
 }
