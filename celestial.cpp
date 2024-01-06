@@ -774,7 +774,7 @@ void GUIPathsTab()
 		}
 	}
 
-	if (ImGui::CollapsingHeader("Seperate Paths"))
+	if (ImGui::CollapsingHeader("Separate Paths"))
 	{
 		for (int i = 0; i < ppLog.displayedPaths.size(); i++)
 		{
@@ -905,7 +905,7 @@ void GUIPathsTab()
 		}
 	}
 
-	if (ImGui::Button("Load Seperate Path", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
+	if (ImGui::Button("Load Separate Path", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
 	{
 		std::string pathsDir = "" + pathlog::GetPathsDirectory();
 		nfdchar_t* NDFpathsDir = (nfdchar_t*)calloc(pathsDir.size() + 1, sizeof(nfdchar_t));
