@@ -67,19 +67,6 @@ void celestial::MainLoop()
 
 	Vector3* playerPos;
 	Vector3* playerRot;
-	
-	//Debug
-	//nfdchar_t* outPath = NULL;
-	//nfdresult_t result = NFD_OpenDialog(NULL, NULL, &outPath);
-
-	//if (result == NFD_OKAY)
-	//{
-	//	free(outPath);
-	//}
-	//else if (result != NFD_CANCEL)
-	//{
-	//	printf("[Celestial] ERROR: %s\n", NFD_GetError());
-	//}
 
 	while (running)
 	{
@@ -97,14 +84,14 @@ void celestial::MainLoop()
 
 void celestial::Init()
 {
-	printf("[Celestial] initializing...\n");
-
 	processStartPtr = reinterpret_cast<uint64_t>(GetModuleHandle(nullptr));
 
 	config::Init(currentConfig);
 	config::ReadConfig(currentConfig);
 
 	pathlog::Init(ppLog);
+
+	printf("[Celestial] Initialized.\n");
 }
 
 void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
@@ -115,11 +102,15 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 
 	pDevice->CreateVertexShader(lineVertexShaderCode.data(), lineVertexShaderCode.size(), NULL, &lineVertexShader);
 	HRESULT vShaderRes = pDevice->CreateVertexShader(vertexShaderCode.data(), vertexShaderCode.size(), NULL, &vertexShader);
-	if (vShaderRes != S_OK) printf("[Celestial] ERROR: Failed to create vertex shader: %X\n", vShaderRes);
+
+	if (vShaderRes != S_OK)
+	{
+		printf("[Celestial] ERROR: Failed to create vertex shader: %X\n", vShaderRes);
+	}
+
 	pDevice->CreatePixelShader(pixelShaderCode.data(), pixelShaderCode.size(), NULL, &pixelShader);
 
 	// Input layouts
-	printf("[Celestial] Creating input layouts...\n");
 	D3D11_INPUT_ELEMENT_DESC iedLine[] = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"NEXTPOSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -128,7 +119,11 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	};
 
 	HRESULT creatIARes = pDevice->CreateInputLayout(iedLine, ARRAYSIZE(iedLine), lineVertexShaderCode.data(), lineVertexShaderCode.size(), &lineInputLayout);
-	if (creatIARes != S_OK) printf("[Celestial] ERROR: Failed to create line input layout: %X\n", creatIARes);
+
+	if (creatIARes != S_OK)
+	{
+		printf("[Celestial] ERROR: Failed to create line input layout: %X\n", creatIARes);
+	}
 
 	D3D11_INPUT_ELEMENT_DESC iedBox[] = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -136,10 +131,13 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	};
 
 	creatIARes = pDevice->CreateInputLayout(iedBox, ARRAYSIZE(iedBox), vertexShaderCode.data(), vertexShaderCode.size(), &boxInputLayout);
-	if (creatIARes != S_OK) printf("[Celestial] ERROR: Failed to create box input layout: %X\n", creatIARes);
+
+	if (creatIARes != S_OK)
+	{
+		printf("[Celestial] ERROR: Failed to create box input layout: %X\n", creatIARes);
+	}
 
 	// Line Vertex buffer
-	printf("[Celestial] Creating line vertex buffer...\n");
 	D3D11_BUFFER_DESC lineVertexBufferDesc;
 	ZeroMemory(&lineVertexBufferDesc, sizeof(lineVertexBufferDesc));
 	lineVertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -154,7 +152,6 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	}
 
 	// Box Vertex buffer
-	printf("[Celestial] Creating box vertex buffer...\n");
 	D3D11_BUFFER_DESC boxVertexBufferDesc;
 	ZeroMemory(&boxVertexBufferDesc, sizeof(boxVertexBufferDesc));
 	boxVertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -201,7 +198,6 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	pDevice->CreateBlendState(&blendDesc, &blendState);
 
 	// Depth Stencil
-	printf("[Celestial] Creating depth stencil state...\n");
 	D3D11_DEPTH_STENCIL_DESC dsDesc;
 	dsDesc.DepthEnable = true;
 	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
@@ -223,10 +219,13 @@ void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 
 	// Create depth stencil state
 	HRESULT cdssRes = pDevice->CreateDepthStencilState(&dsDesc, &depthStencilState);
-	if (cdssRes != S_OK) printf("[Celestial] ERROR: Failed to create depth stencil state: %X\n", cdssRes);
+	if (cdssRes != S_OK)
+	{
+		printf("[Celestial] ERROR: Failed to create depth stencil state: %X\n", cdssRes);
+	}
 
 	initCustomRender = true;
-	printf("[Celestial] rendering initialized.\n");
+	printf("[Celestial] Initialized rendering.\n");
 }
 
 void DrawLine(ID3D11DeviceContext* pContext, std::vector<Vector3> nodes, DirectX::XMFLOAT4 color, float thiccness)
@@ -321,14 +320,12 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 
 	if (!pDevice || !pContext)
 	{
-		printf("[Celestial] ERROR: pDevice or pContext not initialized\n");
+		printf("[Celestial] ERROR: pDevice or pContext not initialized!\n");
 		return ((ocular::SwapChain::PRESENT)ocular::oMethods[ocular::VMT::Present])(pSwapChain, SyncInterval, Flags);
 	}
 
 	if (!initImGui)
 	{
-		printf("[Celestial] Initializing ImGui...\n");
-
 		// Set our WndProc so we can handle some input and pass it to ImGui
 		DXGI_SWAP_CHAIN_DESC sd;
 		pSwapChain->GetDesc(&sd);
@@ -344,6 +341,8 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 		ImGui_ImplWin32_Init(window);
 		ImGui_ImplDX11_Init(pDevice, pContext);
 		initImGui = true;
+
+		printf("[Celestial] ImGui initialized.\n");
 	}
 
 	if (!initCustomRender)
@@ -462,8 +461,6 @@ LRESULT WINAPI celestial::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPa
 // Update our main render target view pointer if the game happens to change theirs.
 void celestial::SetupRenderTarget(IDXGISwapChain* pSwapChain)
 {
-	//Sleep(2000);
-	printf("[Celestial] Setting up render targets...\n");
 	ID3D11Texture2D* pBackBuffer;
 	pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
 
@@ -480,6 +477,8 @@ void celestial::SetupRenderTarget(IDXGISwapChain* pSwapChain)
 		pDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_mainRenderTargetView);
 		pBackBuffer->Release();
 	}
+
+	printf("[Celestial] Set up render targets.\n");
 }
 
 // Release our previous render target for safety.
@@ -487,10 +486,10 @@ void celestial::CleanupRenderTarget()
 {
 	if (!g_mainRenderTargetView) return;
 
-	printf("[Celestial] Cleaning up render targets...\n");
-
 	g_mainRenderTargetView->Release();
 	g_mainRenderTargetView = NULL;
+
+	printf("[Celestial] Cleaned up render targets.\n");
 }
 
 // If the game calls resizeBuffers, our render target will become invalid so let's update it.
@@ -584,11 +583,12 @@ void celestial::CreateLineVertexBuffer(std::vector<Vector3> nodes, DirectX::XMFL
 	}
 }
 
+// please do not read this function I beg you
 void celestial::CreateBoxVertexBuffer(std::vector<Vector3> points, DirectX::XMFLOAT4 color, std::vector<BoxVertex>& destBuffer)
 {
 	if (points.size() != 8)
 	{
-		printf("[Celestial] ERROR: CreateBoxVertexBuffer needs exactly 8 points\n");
+		printf("[Celestial] ERROR: CreateBoxVertexBuffer needs exactly 8 points!\n");
 		Sleep(2000);
 		exit(1);
 	}
@@ -933,6 +933,16 @@ void GUIPathsTab()
 		}
 	}
 
+	if (ImGui::Button("Clear Comparison", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
+	{
+		ppLog.comparedPaths.clear();
+	}
+
+	if (ImGui::Button("Clear Paths", ImVec2(GUI_BUTTON_SIZE, 24.0f)))
+	{
+		ppLog.displayedPaths.clear();
+	}
+
 	ImGui::EndTabItem();
 }
 
@@ -1040,8 +1050,6 @@ void celestial::RenderGUI()
 
 void GUIKeybind(ImGuiIO& io, const char* name, uint32_t& keybind, int rebindingIndex)
 {
-	//ImGuiIO& io = ImGui::GetIO();
-
 	if (!std::count(currentKeybinds.begin(), currentKeybinds.end(), keybind))
 		currentKeybinds.push_back(keybind);
 

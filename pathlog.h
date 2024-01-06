@@ -54,7 +54,6 @@ struct PLogState
 	int triggerState[2];
 
 	bool playerInTrigger[2];
-	//int lastTrigger;
 
 	std::vector<Vector3> debugLines;
 };
@@ -66,7 +65,7 @@ namespace pathlog
 	void Update(PLogState& state, Vector3* pos, Vector3* rot);
 
 	void ReadPathFile(std::string filePath, uint64_t& pathID, std::vector<Path>& destination);
-	void WritePathFile(std::string fileName, std::string fileType, Path& source);
+	void WritePathFile(std::string filePath, Path& source);
 	void ReadCompFile(PLogState& state, std::string filePath);
 	void CreateCompFile(PLogState& state);
 
