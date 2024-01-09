@@ -1,7 +1,7 @@
-# 🌌 celestial ✨
-A path timing tool for NieR: Automata speedrunning
+<h1 align="center">🌌 celestial ✨</h1>
+<h3 align="center">A path timing tool for NieR: Automata speedrunning</h3>
 
-It's probably still very buggy so please feel free to report any weird behavior to me here or on Discord in the DrakeNieR Server: [sponsoredbydrakengard.com](https://sponsoredbydrakengard.com) \
+It's probably still very buggy so please feel free to report any weird behavior to me here or on Discord (hellbufl) \
 A big big thank you to [Woeful Wolf](https://github.com/WoefulWolf/) for helping me with the hooking, rendering and just generally getting me started on this!
 
 # Installation
