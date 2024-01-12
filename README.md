@@ -7,9 +7,17 @@ A big big thank you to [Woeful Wolf](https://github.com/WoefulWolf/) for helping
 # Features
 - Precice Timing of routes
 - Automatic comparison and sorting of times
+<<<<<<< HEAD
 
 # Planned Features
 - Customizing trigger size and color stuff
+=======
+- 3D visualization with depth-buffer rendering.
+
+# Planned Features
+- Customizing trigger size and color stuff
+- I'll remember my ideas when I work on it again
+>>>>>>> 83f51b0612ca80222071b33373d5c3f3478da479
 
 # Installation
 Warning: This tool might not yet be compatible with other mods using ImGUI like FAR or Kajiki (NARoIP).
@@ -28,6 +36,7 @@ Warning: This tool might not yet be compatible with other mods using ImGUI like 
 ### Comparisons (default)
 - Place a start and an end trigger
 - Start recording a path by leaving the start trigger and finish by entering the end trigger
+<<<<<<< HEAD
 <a/>
 <br/>
 After multiple recordings with the same set of triggers, the different paths will be sorted from fastest to slowest and colored on a gradient (default: green -> red) with the fastest being highlighted (default: gold). <br/>
@@ -35,3 +44,18 @@ After multiple recordings with the same set of triggers, the different paths wil
 For a better overview:
 - Highlight a path by clicking on the time
 - Use the buttons labeled "S" ("Solo") and "M" ("Mute") to only show / not show the selected path
+=======
+- Highlight a path by clicking on the time
+- Use the buttons labeled "S" ("Solo") and "M" ("Mute") to only show / not show the selected path
+
+
+After multiple recordings with the same set of triggers, the different paths will be sorted from fastest to slowest and colored on a gradient (default: green -> red) with the fastest being highlighted (default: gold).
+
+Comparisons are stored as `.pcomp` files in `/Paths` in your game directory.
+
+### Separate Paths
+- Activate "Direct Mode" in the Config tag
+- The "Create Trigger" keybinds now directly start and end the recording respectively
+
+Separate Paths are stored as `.p` files in `/Paths` in your game directory.
+>>>>>>> 83f51b0612ca80222071b33373d5c3f3478da479
