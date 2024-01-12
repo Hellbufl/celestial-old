@@ -982,6 +982,11 @@ void GUIConfigTab()
 	ImGui::EndTabItem();
 }
 
+void GUICreditsTab()
+{
+	ImGui::Text("");
+}
+
 void celestial::RenderGUI()
 {
 	if (!initImGui) return;
@@ -1041,7 +1046,7 @@ void celestial::RenderGUI()
 		GUIConfigTab();
 		//CustomizationTab();
 		//DebugTab();
-		//CreditsTab();
+		GUICreditsTab();
 		ImGui::EndTabBar();
 	}
 
