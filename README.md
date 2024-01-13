@@ -14,7 +14,7 @@ A big big thank you to [Woeful Wolf](https://github.com/WoefulWolf/) for helping
 - I'll remember my ideas when I work on it again
 
 # Installation
-Warning: This tool might not yet be compatible with other mods using ImGUI like FAR or Kajiki (NARoIP).
+Warning: This tool might not yet be compatible with other mods using ImGUI like FAR or [Kajiki](https://github.com/WoefulWolf/kajiki-mod) (NARoIP).
 1. Download the [latest release](https://github.com/Hellbufl/celestial/releases)
 2. Extract it in your game folder next to NieRAutomata.exe
 3. Rename "celestial.dll" to one of the [Supported Files](#supported-files)
@@ -39,7 +39,7 @@ After multiple recordings with the same set of triggers, the different paths wil
 Comparisons are stored as `.pcomp` files in `/Paths` in your game directory.
 
 ### Separate Paths
-- Activate "Direct Mode" in the Config tag
+- Activate "Direct Mode" in the Config tab
 - The "Create Trigger" keybinds now directly start and end the recording respectively
 
 Separate Paths are stored as `.p` files in `/Paths` in your game directory.
