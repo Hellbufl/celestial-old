@@ -43,3 +43,8 @@ Comparisons are stored as `.pcomp` files in `/Paths` in your game directory.
 - The "Create Trigger" keybinds now directly start and end the recording respectively
 
 Separate Paths are stored as `.p` files in `/Paths` in your game directory.
+
+# Known Issues
+Unwanted behaviour I am aware of and that I will work on:
+- The game freezes with a black screen on startup if the mouse curser is where the ImGUI window would be
+- The screen freezes when changing window settings like resolution
