@@ -338,6 +338,10 @@ HRESULT celestial::hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT
 
 		// Init our win32 and DX11 ImGui Implementations
 		ImGui::CreateContext();
+
+		ImGuiIO& io = ImGui::GetIO();
+		io.ConfigFlags = ImGuiConfigFlags_NoMouseCursorChange;
+
 		ImGui_ImplWin32_Init(window);
 		ImGui_ImplDX11_Init(pDevice, pContext);
 		initImGui = true;
@@ -984,7 +988,17 @@ void GUIConfigTab()
 
 void GUICreditsTab()
 {
-	ImGui::Text("");
+	if (!ImGui::BeginTabItem("Credits")) return;
+
+	ImGui::Text("\tCreated by Hellbufl");
+	ImGui::Separator();
+	ImGui::Text("\ttether - Woeful Wolf");
+	ImGui::Text("\tocular - Woeful Wolf");
+	ImGui::Text("\tDear ImGui - ocornut");
+	ImGui::Text("\tNative File Dialog - mlabbe");
+	ImGui::Separator();
+	ImGui::Text("\tThank you Wolf for all the help!");
+	ImGui::EndTabItem();
 }
 
 void celestial::RenderGUI()
