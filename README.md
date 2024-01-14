@@ -14,7 +14,7 @@ A big big thank you to [Woeful Wolf](https://github.com/WoefulWolf/) for helping
 - I'll remember my ideas when I work on it again
 
 # Installation
-Warning: This tool might not yet be compatible with other mods using ImGUI like FAR or [Kajiki](https://github.com/WoefulWolf/kajiki-mod) (NARoIP).
+Warning: This tool might not yet be compatible with other mods using ImGUI like FAR or NARoIP (which is outdated, go check out [Kajiki](https://github.com/WoefulWolf/kajiki-mod)!).
 1. Download the [latest release](https://github.com/Hellbufl/celestial/releases)
 2. Extract it in your game folder next to NieRAutomata.exe
 3. Rename "celestial.dll" to one of the [Supported Files](#supported-files)
