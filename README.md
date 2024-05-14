@@ -20,6 +20,7 @@ Functionality:
 Quality of Life:
 - customizing colors
 - toggleable no-depth-buffer overlay
+
 If you have an idea for a feature please feel free to message me on discord!\
 I'm also happy to receive pull requests :)
 
