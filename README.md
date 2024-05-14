@@ -11,11 +11,15 @@ A big big thank you to [Woeful Wolf](https://github.com/WoefulWolf/) for helping
 - 3D visualization with depth-buffer rendering.
 
 # Planned Features
-- customizing trigger size and color stuff
+Functionality:
+- customizing trigger size
 - custom category tabs to organize comparisons
 - live timer onscreen
 - highlighting latest run
 
+Quality of Life:
+- customizing colors
+- toggleable no-depth-buffer overlay
 If you have an idea for a feature please feel free to message me on discord!\
 I'm also happy to receive pull requests :)
 
