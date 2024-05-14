@@ -16,6 +16,7 @@ Functionality:
 - custom category tabs to organize comparisons
 - live timer onscreen
 - highlighting latest run
+- teleportation
 
 Quality of Life:
 - customizing colors
