@@ -1,9 +1,13 @@
 <h1 align="center">🌌 celestial ✨</h1>
 <h3 align="center">A path timing tool for NieR: Automata speedrunning</h3>
 
-It's probably still very buggy so please report any weird behavior in the [Issues](https://github.com/Hellbufl/celestial/issues) section or on Discord (hellbufl) \
-\
 A big big thank you to [Woeful Wolf](https://github.com/WoefulWolf/) for helping me with the hooking, rendering and just generally getting me started on this!
+
+\
+Note: This version has some pretty significant bugs that I do not intend to fix because \
+(1) I spent a lot of time on them and just don't know how and \
+(2) I started re-writing the tool in a non-shit language where I don't have to touch Visual Studio ever again aka. Rust. \
+I'll update this page accordingly when the first release is online. Meanwhile I might still add some small features to this just to make it as useful as it can be in the barely running state it is in.
 
 # Features
 - Precice Timing of routes
@@ -55,6 +59,6 @@ Comparisons are stored as `.pcomp` files in `/Paths` in your game directory.
 Separate Paths are stored as `.p` files in `/Paths` in your game directory.
 
 # Known Issues
-Unwanted behaviour I am aware of and that I will work on:
+Unwanted behaviour I am aware of:
 - The game freezes with a black screen on startup if the mouse curser is where the ImGUI window would be
 - The screen freezes when changing window settings like resolution
