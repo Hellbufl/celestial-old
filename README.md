@@ -8,14 +8,12 @@ A big big thank you to [Woeful Wolf](https://github.com/WoefulWolf/) for helping
 # Features
 - Precice Timing of routes
 - Automatic comparison and sorting of times
-- 3D visualization with depth-buffer rendering.
+- 3D visualization with depth-buffer rendering (works on my machine lmao)
 
 # Planned Features
 Functionality:
 - customizing trigger size
 - custom category tabs to organize comparisons
-- live timer onscreen
-- highlighting latest run
 - teleportation
 
 Quality of Life:
