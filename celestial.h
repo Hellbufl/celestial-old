@@ -7,14 +7,18 @@
 #include <DirectXMath.h>
 #include <chrono>
 #include <map>
+#include <functional>
 #include "ReadData.h"
 #include "pathlog.h"
 #include "gamedata.h"
 #include "config.h"
 
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_impl_dx11.h"
+
+//#include "imgui_internal.h"
 
 #include "nfd.h"
 

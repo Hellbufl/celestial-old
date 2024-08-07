@@ -96,9 +96,9 @@ void celestial::Init()
 
 void celestial::InitRendering(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {
-	lineVertexShaderCode = DX::ReadData(L"line_vertex_shader.cso");
-	vertexShaderCode = DX::ReadData(L"vertex_shader.cso");
-	pixelShaderCode = DX::ReadData(L"pixel_shader.cso");
+	lineVertexShaderCode = DX::ReadData(L"../line_vertex_shader.cso");
+	vertexShaderCode = DX::ReadData(L"../vertex_shader.cso");
+	pixelShaderCode = DX::ReadData(L"../pixel_shader.cso");
 
 	pDevice->CreateVertexShader(lineVertexShaderCode.data(), lineVertexShaderCode.size(), NULL, &lineVertexShader);
 	HRESULT vShaderRes = pDevice->CreateVertexShader(vertexShaderCode.data(), vertexShaderCode.size(), NULL, &vertexShader);
@@ -688,6 +688,9 @@ void GUIPathsTab()
 
 			ImGui::PushID(ppLog.comparedPaths[i].id);
 
+			if (ppLog.comparedPaths[i].id == ppLog.currentPathID)
+				ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetWindowPos() + ImGui::GetCursorPos() - ImVec2(3.0f, 3.0f), ImGui::GetWindowPos() + ImGui::GetCursorPos() + ImVec2(ImGui::GetWindowWidth() - 3.0f, 24.0f), IM_COL32(75, 154, 255, 42));
+
 			if (compMute[ppLog.comparedPaths[i].id])
 			{
 				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.7f));
@@ -786,6 +789,9 @@ void GUIPathsTab()
 			pathSolo.try_emplace(ppLog.displayedPaths[i].id, false);
 
 			ImGui::PushID(ppLog.displayedPaths[i].id);
+
+			if (ppLog.displayedPaths[i].id == ppLog.currentPathID)
+				ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetWindowPos() + ImGui::GetCursorPos() - ImVec2(3.0f, 3.0f), ImGui::GetWindowPos() + ImGui::GetCursorPos() + ImVec2(ImGui::GetWindowWidth() - 3.0f, 24.0f), IM_COL32(75, 154, 255, 42));
 
 			if (pathMute[ppLog.displayedPaths[i].id])
 			{
@@ -1009,12 +1015,25 @@ void celestial::RenderGUI()
 	IM_ASSERT(ImGui::GetCurrentContext() != NULL && "[Celestial] Missing dear imgui context. Refer to examples app!");
 	ImGuiIO& io = ImGui::GetIO();
 
-	ImGuiWindowFlags window_flags = 0;
+	ImGuiWindowFlags timer_window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs;
+
+	ImGui::SetNextWindowSize(ImVec2(100.0f, 20.0f));
+	ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 10.0f - 100.0f, 10.0f));
+
+	uint64_t currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ppLog.recordingStart).count();
+	if (!ppLog.recording) currentTime = ppLog.latestTime;
+
+	ImGui::Begin("Timer", NULL, timer_window_flags);
+	ImGui::SameLine(ImGui::GetWindowWidth() - 78);
+	ImGui::Text("%d:%02d.%03d", currentTime / 60000, (currentTime % 60000) / 1000, currentTime % 1000);
+	ImGui::End();
+
+	ImGuiWindowFlags main_window_flags = 0;
 
 	if (currentConfig.showPLOG)
 	{
 		ImGui::SetNextWindowSizeConstraints(ImVec2(880.0f, 400.0f), io.DisplaySize);
-		if (!ImGui::Begin("PLogMod", (bool*)&currentConfig.showUI, window_flags)) { ImGui::End(); return; }
+		if (!ImGui::Begin("PLogMod", (bool*)&currentConfig.showUI, main_window_flags)) { ImGui::End(); return; }
 
 		ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor::HSV(0.5f, 1.0f, 1.0f, 1.0f));
 
@@ -1050,7 +1069,7 @@ void celestial::RenderGUI()
 	else
 	{
 		ImGui::SetNextWindowSizeConstraints(ImVec2(300.0f, 300.0f), io.DisplaySize);
-		if (!ImGui::Begin("PathLog", (bool*)&currentConfig.showUI, window_flags)) { ImGui::End(); return; }
+		if (!ImGui::Begin("PathLog", (bool*)&currentConfig.showUI, main_window_flags)) { ImGui::End(); return; }
 	}
 
 	ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
@@ -1065,6 +1084,14 @@ void celestial::RenderGUI()
 	}
 
 	ImGui::End();
+
+	//ImGuiWindowFlags timer_window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs;
+
+	//ImGui::SetNextWindowSize(ImVec2(300.0f, 300.0f));
+	//ImGui::SetNextWindowPos(ImVec2(300.0f, 300.0f));
+
+	//ImGui::Begin("Timer", NULL, timer_window_flags);
+	//ImGui::End();
 }
 
 void GUIKeybind(ImGuiIO& io, const char* name, uint32_t& keybind, int rebindingIndex)

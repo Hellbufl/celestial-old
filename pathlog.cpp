@@ -342,8 +342,8 @@ void pathlog::StopRecording(PLogState& state)
 	state.recording = false;
 
 	uint64_t timeRecorded = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - state.recordingStart).count();
-	//printf("[PathLog] recorded time: %lld\n", timeRecorded);
-
+	
+	state.latestTime = timeRecorded;
 	state.recordingPath.time = timeRecorded;
 	state.recordingPath.id = ++state.currentPathID;
 

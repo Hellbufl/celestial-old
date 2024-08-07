@@ -25,7 +25,8 @@ vOut main(const vInput input)
 	float4 clipNextPos = mul(input.nextPosition, transpose(mView));
 
 	float3 tangent = clipNextPos - clipPos;
-	float3 normal = normalize(cross(clipPos, tangent));
+    float3 clip3 = clipPos;
+    float3 normal = normalize(cross(clip3, tangent));
 
 	float4 offset = float4(normal.x, normal.y, normal.z, 0.0f);
 

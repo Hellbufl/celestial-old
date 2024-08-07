@@ -40,6 +40,7 @@ struct PLogState
 	bool direct;
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> recordingStart;
+	uint64_t latestTime;
 
 	Path recordingPath;
 
