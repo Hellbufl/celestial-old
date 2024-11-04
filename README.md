@@ -1,4 +1,4 @@
-<h1 align="center">🌌 celestial ✨</h1>
+<h1 align="center"> celestial (deprecated) </h1>
 <h3 align="center">A path timing tool for NieR: Automata speedrunning</h3>
 
 A big big thank you to [Woeful Wolf](https://github.com/WoefulWolf/) for helping me with the hooking, rendering and just generally getting me started on this!
@@ -14,21 +14,11 @@ I'll update this page accordingly when the first release is online. Meanwhile I 
 - Automatic comparison and sorting of times
 - 3D visualization with depth-buffer rendering (works on my machine lmao)
 
-# Planned Features
-Functionality:
-- customizing trigger size
-- custom category tabs to organize comparisons
-- teleportation
-
-Quality of Life:
-- customizing colors
-- toggleable no-depth-buffer overlay
-
 If you have an idea for a feature please feel free to message me on discord!\
 I'm also happy to receive pull requests :)
 
 # Installation
-Warning: This tool might not yet be compatible with other mods using ImGUI like FAR or NARoIP (which is outdated, go check out [Kajiki](https://github.com/WoefulWolf/kajiki-mod)!).
+Warning: This tool might not be compatible with other mods using ImGUI like FAR or NARoIP (which is outdated, go check out [Kajiki](https://github.com/WoefulWolf/kajiki-mod)!).
 1. Download the [latest release](https://github.com/Hellbufl/celestial/releases)
 2. Extract it in your game folder next to NieRAutomata.exe
 3. Rename "celestial.dll" to one of the [Supported Files](#supported-files)
@@ -62,3 +52,4 @@ Separate Paths are stored as `.p` files in `/Paths` in your game directory.
 Unwanted behaviour I am aware of:
 - The game freezes with a black screen on startup if the mouse curser is where the ImGUI window would be
 - The screen freezes when changing window settings like resolution
+- possible memory leaks that (when the tool is in active use) crash the game after a few minutes :)
